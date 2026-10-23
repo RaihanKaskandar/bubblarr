@@ -33,9 +33,11 @@
 		</td>
 		<td>
 			<a href="" target="_blank"></a>
+			<p class="rejection-reason"></p>
 		</td>
 		<td class="source-column"></td>
 		<td class="size-column"></td>
+		<td class="seeders-column"></td>
 		<td class="search-action-column action-list" aria-label="Actions">
 			{{ icon_button('', "Download", "download.svg") }}
 			{{ icon_button('', "Force Download", "manual_search.svg") }}
@@ -205,6 +207,13 @@
 
 	{% set manual_search_content %}
 		<p id="searching-message">Searching...</p>
+		<div id="search-summary" class="hidden">
+			<p id="search-summary-text"></p>
+			<label id="show-rejected-label">
+				<input type="checkbox" id="show-rejected-input">
+				<span id="show-rejected-text">Show rejected releases</span>
+			</label>
+		</div>
 		<table id="search-result-table" class="icon-text-color">
 			<thead>
 				<tr>
@@ -212,6 +221,7 @@
 					<th>Title</th>
 					<th class="source-column">Source</th>
 					<th class="size-column">Size</th>
+					<th class="seeders-column" title="Seeders (torrents only)">Seeders</th>
 					<th class="search-action-column">Action</th>
 				</tr>
 			</thead>

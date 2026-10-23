@@ -45,18 +45,6 @@
 	</tr>
 {% endblock %}
 
-{% block right_side_header %}
-	<form id="search-container" class="icon-dark-color" aria-label="Search bar">
-		<button type="submit" id="start-search" aria-label="Start search">
-			<img src="{{url_base}}/static/img/search.svg" alt="">
-		</button>
-		<input type="text" id="search-input" placeholder="Search" aria-label="Search input">
-		<button type="button" id="clear-search" aria-label="Clear search">
-			<img src="{{url_base}}/static/img/cancel.svg" alt="">
-		</button>
-	</form>
-{% endblock %}
-
 {% block main %}
 <main>
 	<input type="checkbox" id="massedit-toggle" class="hidden">

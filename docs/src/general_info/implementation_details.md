@@ -14,7 +14,7 @@ Fetching the metadata of all volumes is relatively quick, taking between 3 and 4
 A normal volume is a volume that has one or more issues. If the volume only has one issue, then the issue must be released within the last month. Otherwise the volume is considered a TPB by default.
 
 - **Volume as Issue**  
-A 'Volume as Issue' volume is a volume where each issue is called 'Volume N', where N is a number. Kapowarr automatically detects this by looking at the issue titles. It recognises digits (e.g. 'Volume 2') and words (e.g. 'Volume Two') but not roman numbers (e.g. NOT 'Volume III'). If you want your files to be named like a VAI (see the [File Naming For "Volume As Issue"](../settings/mediamanagement.md#file-naming-for-volume-as-issue) setting), then override the Special Version of the volume to this.
+A 'Volume as Issue' volume is a volume where each issue is called 'Volume N', where N is a number. Bubblarr automatically detects this by looking at the issue titles. It recognises digits (e.g. 'Volume 2') and words (e.g. 'Volume Two') but not roman numbers (e.g. NOT 'Volume III'). If you want your files to be named like a VAI (see the [File Naming For "Volume As Issue"](../settings/mediamanagement.md#file-naming-for-volume-as-issue) setting), then override the Special Version of the volume to this.
 
 - **TPB**  
 A TPB volume is a volume with only one issue: the TPB. If there is a volume that contains multiple issues where it claims that each issue is a TPB, then such a volume is a normal volume.
@@ -42,11 +42,11 @@ If you imported files but certain ones pop up again in the next run, see the [FA
 
 ## Downloading from GetComics
 
-When a GetComics release has been chosen, either by you or by Kapowarr, Kapowarr will try to find a download link (or multiple) on the page to use for downloading the file(s). How Kapowarr decides which link(s) to use, is broken down in the following steps:
+When a GetComics release has been chosen, either by you or by Bubblarr, Bubblarr will try to find a download link (or multiple) on the page to use for downloading the file(s). How Bubblarr decides which link(s) to use, is broken down in the following steps:
 
-1. GetComics often offers multiple services for the same download. Kapowarr first analyses the page and collects all groups and their links (one group per download).
-2. Next, it will combine multiple groups to cover as many issues as possible (if the download is for more than one issue). This collection of groups will form a 'path'. Groups are only added to a path if Kapowarr thinks that the group is actually downloading something we want. There can be multiple paths, in the case where there are conflicting groups. For example when there is a torrent download for all issues and multiple other downloads for issues 1-10, 11-20, etc.
+1. GetComics often offers multiple services for the same download. Bubblarr first analyses the page and collects all groups and their links (one group per download).
+2. Next, it will combine multiple groups to cover as many issues as possible (if the download is for more than one issue). This collection of groups will form a 'path'. Groups are only added to a path if Bubblarr thinks that the group is actually downloading something we want. There can be multiple paths, in the case where there are conflicting groups. For example when there is a torrent download for all issues and multiple other downloads for issues 1-10, 11-20, etc.
 3. All the links in the first path are tested, to see if they work, are supported and are allowed by the blocklist. A link could not be supported because the service is simply not supported, or because it's a torrent download and no torrent client is set up. If enough links pass, all the downloads in the path are added to the queue to be downloaded. If not enough links pass, the next path is tested until one is found that passes. If none pass, the page is added to the blocklist for having no working links.
 4. When a path passes and its groups are added to the download queue, a decision needs to be made for which service is going to be used for each group (DDL, Mega, MediaFire, etc.). The ['Service Preference' setting](../settings/download.md#service-preference) decides this.
 
-If Kapowarr downloads less (or nothing at all) from a page, but you are convinced that that shouldn't be the case, read about this topic [on the FAQ page](../other_docs/faq.md#why-does-kapowarr-not-grab-the-links-from-a-getcomics-page-even-though-they-work-fine).
+If Bubblarr downloads less (or nothing at all) from a page, but you are convinced that that shouldn't be the case, read about this topic [on the FAQ page](../other_docs/faq.md#why-does-bubblarr-not-grab-the-links-from-a-getcomics-page-even-though-they-work-fine).

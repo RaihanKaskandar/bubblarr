@@ -1,37 +1,61 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="{{theme}}">
 <head>
 	<meta charset="UTF-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 	<meta id="url_base" data-value="{{url_base}}">
 
-	<link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/x-icon">
+	<link rel="manifest" href="{{url_base}}/manifest.json">
+	<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-title" content="Bubblarr">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="theme-color" content="#5d4a94">
+
+	<link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 	<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 	<script src="{{ url_for('static', filename='js/login.js') }}" defer></script>
 
-	<title>Login - Kapowarr</title>
+	<title>Login - Bubblarr</title>
 </head>
 <body>
-	<div id="text-container">
-		<h1>Kapowarr</h1>
-		<p>Please log in</p>
+	<div id="login-page">
+		<div id="login-panel">
+			<div id="login-header">
+				<img src="{{ url_for('static', filename='img/favicon.svg') }}" alt="" width="56" height="56">
+				<h1>Bubblarr</h1>
+			</div>
+
+			<noscript>This web-UI does not work without JavaScript.</noscript>
+
+			<form id="login-form" action="javascript:void(0);" novalidate>
+				<p id="error-message" class="hidden" role="alert">Incorrect username or password</p>
+
+				<label id="username-container">
+					<span>Username</span>
+					<input type="text" id="username-input" name="username"
+						autocomplete="username" autocapitalize="none" autocorrect="off"
+						spellcheck="false" placeholder="Username" required>
+				</label>
+
+				<label>
+					<span>Password</span>
+					<input type="password" id="password-input" name="password"
+						autocomplete="current-password" placeholder="Password" required>
+				</label>
+
+				<button type="submit" id="login-button">Log In</button>
+			</form>
+		</div>
 	</div>
-	<noscript>
-		WARNING: This web-UI does not work without JavaScript.
-	</noscript>
-	<form id="login-form" class="hidden">
-		<p id="error-message" class="error hidden">*Credentials invalid</p>
-		<div class="input-container">
-			<input type="text" id="username-input" autocomplete="username" placeholder="Username" autofocus required>
-		</div>
-		<div class="input-container">
-			<input type="password" id="password-input" autocomplete="current-password" placeholder="Password" required>
-		</div>
-		<button>Login</button>
-	</form>
 </body>
 </html>

@@ -3,13 +3,13 @@
 /*  */
 body {
 	--light-color: #ffffff;
-	--off-light-color: #f6f6f6;
-	--dark-hover-color: #f9f9f9;
+	--off-light-color: #f5f7fa;
+	--dark-hover-color: #fafbfc;
 	--border-color: #dde6e9;
-	--mid-color: #808080;
-	--dark-color: #464b51;
+	--mid-color: #4f566f;
+	--dark-color: #3a3f51;
 
-	--accent-color: #ebc700;
+	--accent-color: #7458c4;
 	--success-color: #54db68;
 	--error-color: #db5461;
 	
@@ -17,19 +17,21 @@ body {
 	--text-color: var(--dark-color);
 	--dark-text-color: var(--mid-color);
 	--light-text-color: var(--border-color);
-	--header-background-color: var(--accent-color);
-	--header-color: var(--dark-color);
+	--header-background-color: #5d4a94;
+	--header-color: #ffffff;
 	--code-background-color: var(--mid-color);
 	--search-color: var(--dark-color);
 }
 
-[data-md-color-scheme="Kapowarr-dark"] {
-	--light-color: #dde6e9;
-	--off-light-color: #c5c5c5;
-	--border-color: #7f7f7f;
-	--gray-color: #2a2a2a;
-	--mid-color: #262626;
+[data-md-color-scheme="Bubblarr-dark"] {
+	--light-color: #e1e2e3;
+	--off-light-color: #cccccc;
+	--border-color: #858585;
+	--gray-color: #333333;
+	--mid-color: #2a2a2a;
 	--dark-color: #202020;
+
+	--accent-color: #a28fe6;
 	--dark-hover-color: var(--mid-color);
 	
 	--light-accent-color: var(--border-color);
@@ -38,8 +40,8 @@ body {
 	--text-color: var(--light-color);
 	--dark-text-color: var(--off-light-color);
 	--light-text-color: var(--light-color);
-	--header-background-color: var(--accent-color);
-	--header-color: var(--gray-color);
+	--header-background-color: #2a2a2a;
+	--header-color: #e1e2e3;
 	--code-background-color: var(--gray-color);
 	--search-color: var(--text-color);
 }
@@ -47,8 +49,8 @@ body {
 /*  */
 /* Color applied */
 /*  */
-body[data-md-color-scheme="Kapowarr"],
-body[data-md-color-scheme="Kapowarr-dark"] {
+body[data-md-color-scheme="Bubblarr"],
+body[data-md-color-scheme="Bubblarr-dark"] {
 	/* Background color of header */
 	--md-primary-fg-color: var(--header-background-color);
 	/* Color in header */
@@ -160,7 +162,7 @@ body[data-md-color-scheme="Kapowarr-dark"] {
 }
 
 [data-md-component="search-result"] > div {
-	background-color: var(--accent-color);
+	background-color: var(--header-background-color);
 	color: var(--header-color);
 }
 
@@ -176,7 +178,7 @@ body[data-md-color-scheme="Kapowarr-dark"] {
 }
 
 details {
-	border-color: var(--header-color);
+	border-color: var(--accent-color);
 }
 
 details > summary {
@@ -184,7 +186,7 @@ details > summary {
 }
 
 details > summary::before {
-	background-color: var(--header-color);
+	background-color: var(--accent-color);
 }
 
 
@@ -207,8 +209,8 @@ details > summary::before {
 	flex-grow: 1;
 	padding: 0.5rem;
 	border-radius: 10px;
-	border: 3px solid rgb(235 199 0);
-	background-color: rgb(177 150 0 / 39%);
+	border: 3px solid var(--accent-color);
+	background-color: rgb(116 88 196 / 15%);
 	color: var(--text-color);
 	text-decoration: none;
 	font-size: larger;

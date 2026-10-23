@@ -20,8 +20,8 @@ const backupEls = {
 }
 
 const invalidDbReasonMap = {
-	not_kapowarr_db: "Uploaded database is not a Kapowarr database file",
-	version_not_supported: "Uploaded database is higher version than this Kapowarr installation can support"
+	not_kapowarr_db: "Uploaded database is not a Bubblarr database file",
+	version_not_supported: "Uploaded database is higher version than this Bubblarr installation can support"
 }
 
 const backups = {}

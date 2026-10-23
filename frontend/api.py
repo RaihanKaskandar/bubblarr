@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 
+import logging
 from asyncio import run
 from datetime import datetime
 from io import BytesIO
 from os import remove
 from os.path import basename, splitext
+from re import IGNORECASE
+from re import compile as re_compile
 from typing import Any, Dict, List, Tuple, Union
 
 from flask import Blueprint, after_this_request, request, send_file
 
-from backend.base.custom_exceptions import (InvalidDatabaseFile,
+from backend.base.custom_exceptions import (ClientNotWorking,
+                                            CredentialInvalid,
+                                            InvalidDatabaseFile,
                                             InvalidKeyValue, KeyNotFound)
 from backend.base.definitions import (BlocklistReason, BlocklistReasonID,
-                                      CredentialData, CredentialSource,
+                                      Constants, CredentialData,
+                                      CredentialSource,
                                       DownloadService, DownloadType, FileMatch,
                                       IndexerClientField,
                                       InvalidDatabaseReason, KapowarrException,
@@ -21,7 +27,9 @@ from backend.base.definitions import (BlocklistReason, BlocklistReasonID,
                                       StatusType, VolumeData)
 from backend.base.files import folder_path
 from backend.base.helpers import hash_credential
-from backend.base.logging import LOGGER, get_log_file_contents
+from backend.base.logging import (LOGGER, MEMORY_LOG_HANDLER,
+                                  get_log_file_contents)
+from backend.features import comic_requests, comicgeeks_sync, webhooks
 from backend.features.download_queue import (DownloadHandler,
                                              delete_download_history,
                                              get_download_history)
@@ -29,13 +37,14 @@ from backend.features.library_import import (import_library,
                                              propose_library_import)
 from backend.features.mass_edit import MassEditorActionManager
 from backend.features.search_full import manual_search
-from backend.features.tasks import (TaskHandler, delete_task_history,
-                                    get_task_history)
+from backend.features.tasks import (TaskHandler, UpdateAll,
+                                    delete_task_history, get_task_history)
 from backend.implementations.blocklist import (add_to_blocklist,
                                                delete_blocklist,
                                                delete_blocklist_entry,
                                                get_blocklist,
                                                get_blocklist_entry)
+from backend.implementations.comicgeeks import ComicGeeks
 from backend.implementations.comicvine import ComicVine
 from backend.implementations.conversion import preview_mass_convert
 from backend.implementations.converters import ConvertersManager
@@ -99,6 +108,10 @@ def extract_key(request, key: str, check_existence: bool = True) -> Any:
         Any: The formatted value of the key.
     """
     value: Any = request.values.get(key)
+    if key == 'api_key' and value is None:
+        # Like Sonarr/Radarr, the API key can also be given in a header,
+        # which keeps it out of URLs (and so out of proxy logs)
+        value = request.headers.get('X-Api-Key')
     if check_existence and value is None:
         raise KeyNotFound(key)
 
@@ -312,8 +325,65 @@ def api_logs():
     return send_file(
         BytesIO(sio.getvalue().encode('utf-8')),
         mimetype="application/octet-stream",
-        download_name=f'Kapowarr_log_{datetime.now().strftime("%Y_%m_%d_%H_%M")}.txt'
+        download_name=f'Bubblarr_log_{datetime.now().strftime("%Y_%m_%d_%H_%M")}.txt'
     ), 200
+
+
+LOG_LEVELS = {
+    'debug': logging.DEBUG,
+    'info': logging.INFO,
+    'warning': logging.WARNING,
+    'error': logging.ERROR
+}
+SECRET_IN_LOG = re_compile(
+    r'((?:api_?key|apikey|token|password|passkey)["\']?\s*[=:]\s*["\']?)'
+    r'[^&\s"\',]+',
+    IGNORECASE
+)
+
+
+def _redact_log_message(message: str) -> str:
+    message = SECRET_IN_LOG.sub(r'\1[REDACTED]', message)
+    api_key = Settings().sv.api_key
+    if api_key:
+        message = message.replace(api_key, '[REDACTED]')
+    return message
+
+
+@api.route('/system/logs/entries', methods=['GET'])
+@error_handler
+@auth
+def api_log_entries():
+    after = extract_key(request, 'after', False) or '0'
+    limit = extract_key(request, 'limit', False) or '500'
+    try:
+        after = int(after)
+        limit = int(limit)
+    except ValueError:
+        raise InvalidKeyValue('after/limit', f'{after}/{limit}')
+    if after < 0 or not 1 <= limit <= 5000:
+        raise InvalidKeyValue('after/limit', f'{after}/{limit}')
+
+    level_name = (extract_key(request, 'level', False) or 'debug').lower()
+    if level_name not in LOG_LEVELS:
+        raise InvalidKeyValue('level', level_name)
+
+    search = extract_key(request, 'search', False) or ''
+
+    entries = MEMORY_LOG_HANDLER.get_entries(
+        after=after,
+        level=LOG_LEVELS[level_name],
+        search=search,
+        limit=limit
+    )
+    return return_api({
+        'instance': MEMORY_LOG_HANDLER.instance,
+        'last_id': MEMORY_LOG_HANDLER.last_id,
+        'entries': [
+            {**e, 'message': _redact_log_message(e['message'])}
+            for e in entries
+        ]
+    })
 
 
 @api.route('/system/tasks', methods=['GET', 'POST'])
@@ -493,7 +563,7 @@ def api_database():
 
         copy_hosting_settings = request.form["copy_hosting_settings"] == "true"
 
-        save_path = folder_path("db", "Kapowarr_upload.db")
+        save_path = folder_path("db", "Bubblarr_upload.db")
         db_file.save(save_path)
 
         import_db(save_path, copy_hosting_settings)
@@ -569,7 +639,21 @@ def api_settings():
         if hosting_changes:
             settings.backup_hosting_settings()
 
+        date_type_changed = (
+            'date_type' in data
+            and data['date_type'] != settings.sv.date_type.value
+        )
+
         settings.update(data, from_public=True)
+
+        if date_type_changed:
+            # Fetch the dates of the new type for all issues
+            TaskHandler().add(UpdateAll(allow_skipping=False))
+
+        if any(k.startswith('comicgeeks_') for k in data):
+            # Log in again with the new credentials
+            ComicGeeks.reset()
+            comicgeeks_sync.clear_cache()
 
         if hosting_changes:
             Server().restart(StartType.RESTART_HOSTING_CHANGES)
@@ -1053,6 +1137,218 @@ def api_volumes():
 def api_volumes_stats():
     result = Library.get_stats()
     return return_api(result)
+
+
+@api.route('/calendar', methods=['GET'])
+@error_handler
+@auth
+def api_calendar():
+    dates = {}
+    for key in ('start', 'end'):
+        value = request.args.get(key)
+        if value is None:
+            raise KeyNotFound(key)
+        try:
+            dates[key] = datetime.strptime(value, '%Y-%m-%d')
+        except ValueError:
+            raise InvalidKeyValue(key, value)
+
+    if not 0 <= (dates['end'] - dates['start']).days <= 366:
+        raise InvalidKeyValue('end', request.args['end'])
+
+    monitored_only = request.args.get('monitored_only', '').lower() in (
+        'true', '1'
+    )
+
+    result = Library.get_calendar(
+        request.args['start'],
+        request.args['end'],
+        monitored_only
+    )
+    return return_api(result)
+
+
+@api.route('/calendar/pull-list', methods=['GET'])
+@error_handler
+@auth
+def api_calendar_pull_list():
+    dates = {}
+    for key in ('start', 'end'):
+        value = request.args.get(key)
+        if value is None:
+            raise KeyNotFound(key)
+        try:
+            dates[key] = datetime.strptime(value, '%Y-%m-%d').date()
+        except ValueError:
+            raise InvalidKeyValue(key, value)
+
+    if not 0 <= (dates['end'] - dates['start']).days <= 62:
+        raise InvalidKeyValue('end', request.args['end'])
+
+    # The calendar should always work, even if LoCG doesn't
+    try:
+        items = comicgeeks_sync.get_pull_list(dates['start'], dates['end'])
+        error = None
+    except CredentialInvalid:
+        items, error = [], 'invalid_credentials'
+    except ClientNotWorking as e:
+        items, error = [], e.reason.value
+    except Exception:
+        LOGGER.exception('Failed to get pull list from League of Comic Geeks: ')
+        items, error = [], 'failed_processing_response'
+
+    return return_api({'items': items, 'error': error})
+
+
+@api.route('/comicgeeks/test', methods=['POST'])
+@error_handler
+@auth
+def api_comicgeeks_test():
+    data = request.get_json() or {}
+    username = data.get('username') or ''
+    password = data.get('password') or ''
+    if password == Constants.CREDENTIAL_REPLACEMENT:
+        password = Settings().sv.comicgeeks_password
+    if not isinstance(username, str) or not username:
+        raise InvalidKeyValue('username', username)
+    if not isinstance(password, str) or not password:
+        raise InvalidKeyValue('password', None)
+
+    result = comicgeeks_sync.test_connection(username, password)
+    return return_api(result)
+
+
+# region Request apps
+def _parse_int(key: str, value: Any) -> int:
+    if isinstance(value, bool):
+        raise InvalidKeyValue(key, value)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise InvalidKeyValue(key, value)
+
+
+@api.route('/lookup', methods=['GET'])
+@error_handler
+@auth
+def api_lookup():
+    query = extract_key(request, 'query')
+    return return_api(comic_requests.lookup_search(query))
+
+
+@api.route('/lookup/status', methods=['GET'])
+@error_handler
+@auth
+def api_lookup_status():
+    raw = extract_key(request, 'comicvine_ids')
+    cv_ids = [
+        _parse_int('comicvine_ids', i)
+        for i in raw.split(',') if i.strip()
+    ]
+    if not cv_ids or len(cv_ids) > 500:
+        raise InvalidKeyValue('comicvine_ids', raw)
+    statuses = comic_requests.status_by_comicvine_ids(cv_ids)
+    return return_api({str(k): v for k, v in statuses.items()})
+
+
+@api.route('/lookup/releases', methods=['GET'])
+@error_handler
+@auth
+def api_lookup_releases():
+    dates = []
+    for key in ('start', 'end'):
+        value = extract_key(request, key)
+        try:
+            dates.append(datetime.strptime(value, '%Y-%m-%d'))
+        except ValueError:
+            raise InvalidKeyValue(key, value)
+    if not 0 <= (dates[1] - dates[0]).days <= 31:
+        raise InvalidKeyValue('end', request.values.get('end'))
+
+    # Not through extract_key, which defaults 'limit' to 20
+    limit = request.values.get('limit') or '500'
+    try:
+        limit = int(limit)
+    except ValueError:
+        raise InvalidKeyValue('limit', limit)
+    if not 100 <= limit <= 3000:
+        raise InvalidKeyValue('limit', limit)
+
+    return return_api(comic_requests.lookup_releases(
+        dates[0].strftime('%Y-%m-%d'), dates[1].strftime('%Y-%m-%d'), limit
+    ))
+
+
+@api.route('/lookup/<int:cv_id>', methods=['GET'])
+@error_handler
+@auth
+def api_lookup_volume(cv_id: int):
+    return return_api(comic_requests.lookup_volume(cv_id))
+
+
+@api.route('/request', methods=['POST'])
+@error_handler
+@auth
+def api_request():
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    if 'comicvine_id' not in data:
+        raise KeyNotFound('comicvine_id')
+
+    root_folder_id = data.get('root_folder_id')
+    search = data.get('search', True)
+    if not isinstance(search, bool):
+        raise InvalidKeyValue('search', search)
+
+    result = comic_requests.request_volume(
+        comicvine_id=_parse_int('comicvine_id', data['comicvine_id']),
+        issues=data.get('issues', 'all'),
+        root_folder_id=(
+            None
+            if root_folder_id is None else
+            _parse_int('root_folder_id', root_folder_id)
+        ),
+        monitor_new_issues=data.get('monitor_new_issues'),
+        search=search
+    )
+    return return_api(result, code=201 if result['added'] else 200)
+
+
+@api.route('/volumes/<int:id>/status', methods=['GET'])
+@error_handler
+@auth
+def api_volume_status(id: int):
+    Library.get_volume(id)
+    return return_api(comic_requests.volume_status(id, include_issues=True))
+
+
+@api.route('/webhooks/test', methods=['POST'])
+@error_handler
+@auth
+def api_webhooks_test():
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    settings = Settings().sv
+
+    urls = data.get('urls')
+    if urls is None:
+        urls = list(settings.webhook_urls)
+    if (
+        not isinstance(urls, list)
+        or not all(isinstance(u, str) for u in urls)
+    ):
+        raise InvalidKeyValue('urls', urls)
+    urls = [u.strip() for u in urls if u.strip()]
+    if not urls or not all(
+        u.startswith(('http://', 'https://')) for u in urls
+    ):
+        raise InvalidKeyValue('urls', urls)
+
+    secret = data.get('secret')
+    if secret is None or secret == Constants.CREDENTIAL_REPLACEMENT:
+        secret = settings.webhook_secret
+    if not isinstance(secret, str):
+        raise InvalidKeyValue('secret', None)
+
+    return return_api(webhooks.test_webhooks(urls, secret))
 
 
 @api.route('/volumes/<int:id>', methods=['GET', 'PUT', 'DELETE'])

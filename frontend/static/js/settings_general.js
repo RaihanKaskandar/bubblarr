@@ -18,6 +18,8 @@ function fillSettings(api_key) {
 		document.querySelector('#log-level-input').value = json.result.log_level;
 		document.querySelector('#db-backup-folder-input').value = json.result.db_backup_folder;
 		document.querySelector('#db-backup-count-input').value = json.result.db_backup_amount;
+		document.querySelector('#webhook-urls-input').value = json.result.webhook_urls.join('\n');
+		document.querySelector('#webhook-secret-input').value = json.result.webhook_secret;
 		
 		if (json.result.auth_username && json.result.auth_password) {
 			document.querySelector('#auth-toggle').value = 'username-password';
@@ -36,6 +38,7 @@ function saveSettings(api_key) {
 	document.querySelector('#cv-input').classList.remove('error-input');
 	document.querySelector("#flaresolverr-input").classList.remove('error-input');
 	document.querySelector("#db-backup-folder-input").classList.remove("error-input");
+	document.querySelector("#webhook-urls-input").classList.remove("error-input");
 
 	let proxyIgnoredAddresses = document.querySelector('#proxy-ignored-addresses-input').value.split(',');
 	if (proxyIgnoredAddresses[0] === '') {
@@ -57,7 +60,9 @@ function saveSettings(api_key) {
 		'flaresolverr_base_url': document.querySelector('#flaresolverr-input').value,
 		'log_level': parseInt(document.querySelector('#log-level-input').value),
 		'db_backup_folder': document.querySelector("#db-backup-folder-input").value,
-		'db_backup_amount': parseInt(document.querySelector("#db-backup-count-input").value)
+		'db_backup_amount': parseInt(document.querySelector("#db-backup-count-input").value),
+		'webhook_urls': getWebhookUrls(),
+		'webhook_secret': document.querySelector('#webhook-secret-input').value
 	};
 	
 	const auth_toggle = document.querySelector('#auth-toggle');
@@ -102,6 +107,12 @@ function saveSettings(api_key) {
 			document.querySelector("#flaresolverr-input").classList.add('error-input');
 
 		else if (
+			json.error === "InvalidKeyValue"
+			&& json.result.key === "webhook_urls"
+		)
+			document.querySelector("#webhook-urls-input").classList.add('error-input');
+
+		else if (
 			json.error === "FolderNotFound"
 		)
 			document.querySelector("#db-backup-folder-input").classList.add("error-input");
@@ -109,6 +120,47 @@ function saveSettings(api_key) {
 		else
 			console.log(json.error);
 	});
+};
+
+function getWebhookUrls() {
+	return document.querySelector('#webhook-urls-input').value
+		.split('\n')
+		.map(u => u.trim())
+		.filter(u => u);
+};
+
+function setWebhookStatus(text, state=null) {
+	const status = document.querySelector('#webhook-status');
+	status.innerText = text;
+	status.classList.remove('success', 'error');
+	if (state)
+		status.classList.add(state);
+};
+
+function testWebhooks(api_key) {
+	const urls = getWebhookUrls();
+	if (!urls.length) {
+		setWebhookStatus('Enter a URL first', 'error');
+		return;
+	};
+
+	setWebhookStatus('Testing...');
+	sendAPI('POST', '/webhooks/test', api_key, {}, {
+		urls: urls,
+		secret: document.querySelector('#webhook-secret-input').value
+	})
+	.then(response => response.json())
+	.then(json => {
+		const failed = json.result.filter(r => !r.success);
+		if (!failed.length)
+			setWebhookStatus('All URLs received the test event', 'success');
+		else
+			setWebhookStatus(
+				'Failed: ' + failed.map(r => `${r.url} (${r.error})`).join(', '),
+				'error'
+			);
+	})
+	.catch(e => setWebhookStatus('Invalid URL, they have to start with http:// or https://', 'error'));
 };
 
 function generateApiKey(api_key) {
@@ -127,6 +179,7 @@ usingApiKey()
 	fillSettings(api_key);
 	document.querySelector('#save-button').onclick = e => saveSettings(api_key);
 	document.querySelector('#generate-api').onclick = e => generateApiKey(api_key);
+	document.querySelector('#webhook-test-button').onclick = e => testWebhooks(api_key);
 	document.querySelector('#download-logs-button').href =
 		`${url_base}/api/system/logs?api_key=${api_key}`;
 });

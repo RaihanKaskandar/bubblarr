@@ -1,0 +1,84 @@
+# Run Bubblarr together with Prowlarr and qBittorrent.
+#
+#   docker compose -f docker-compose.torrents.yml up -d --build
+#
+# Optional extras (Jackett and FlareSolverr) are started with profiles:
+#
+#   docker compose -f docker-compose.torrents.yml --profile jackett --profile flaresolverr up -d --build
+#
+# All data is stored in ./data next to this file. Change the paths of
+# "comics" to point to your existing comic library.
+#
+# The download folder is mounted at the same path (/app/temp_downloads) in
+# Bubblarr and qBittorrent, so no remote mapping is needed.
+
+x-common-env: &common-env
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+  TZ: ${TZ:-Etc/UTC}
+
+services:
+  bubblarr:
+    container_name: bubblarr
+    build: .
+    image: bubblarr:latest
+    environment: *common-env
+    volumes:
+      - ./data/bubblarr:/app/db
+      - ./data/downloads:/app/temp_downloads
+      - ./data/comics:/comics
+    ports:
+      - 5656:5656
+    restart: unless-stopped
+
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:latest
+    environment: *common-env
+    volumes:
+      - ./data/prowlarr:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+
+  qbittorrent:
+    container_name: qbittorrent
+    image: lscr.io/linuxserver/qbittorrent:latest
+    environment:
+      <<: *common-env
+      WEBUI_PORT: 8080
+    volumes:
+      - ./data/qbittorrent:/config
+      - ./data/downloads:/app/temp_downloads
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+
+  jackett:
+    container_name: jackett
+    image: lscr.io/linuxserver/jackett:latest
+    profiles: [jackett]
+    environment:
+      <<: *common-env
+      AUTO_UPDATE: "false"
+    volumes:
+      - ./data/jackett:/config
+    ports:
+      - 9117:9117
+    restart: unless-stopped
+
+  flaresolverr:
+    # Needed by some indexers that are behind Cloudflare (e.g. 1337x).
+    # In Prowlarr: Settings -> Indexers -> add FlareSolverr with
+    # http://flaresolverr:8191 and give it a tag that you also put on the
+    # indexers that need it.
+    container_name: flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    profiles: [flaresolverr]
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+    ports:
+      - 8191:8191
+    restart: unless-stopped

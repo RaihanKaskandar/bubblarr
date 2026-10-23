@@ -160,3 +160,7 @@ temp_downloads/*
 docs/
 requirements-dev.txt
 release.sh
+
+# Data of docker-compose.torrents.yml
+data/
+docker-compose.torrents.yml

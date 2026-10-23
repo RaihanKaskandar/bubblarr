@@ -4,13 +4,17 @@
 	<!-- Standard headers -->
 	<meta charset="UTF-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 	<meta id="url_base" data-value="{{url_base}}">
 
 	<link rel="manifest" href="{{url_base}}/manifest.json">
-	<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon.svg') }}">
-	<meta name="apple-mobile-web-app-status-bar" content="#ebc700">
-	<meta name="theme-color" content="#ebc700">
+	<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-title" content="Bubblarr">
+	<!-- On the home screen, let the header continue behind the status bar -->
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="theme-color" content="#5d4a94">
 
 	<link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/x-icon">
 
@@ -27,7 +31,7 @@
 	{% block js %}
 	{% endblock js %}
 
-	<title>{% block title %}{% endblock %} - Kapowarr</title>
+	<title>{% block title %}{% endblock %} - Bubblarr</title>
 
 </head>
 <body>
@@ -54,9 +58,19 @@
 				<img src="{{url_base}}/static/img/menu.svg" alt="">
 			</button>
 			<a href="{{url_base}}/" aria-label="Go to homepage">
-				<img src="{{ url_for('static', filename='img/favicon.svg') }}" alt="">
+				<img src="{{ url_for('static', filename='img/logo-header.svg') }}" alt="">
 			</a>
 		</div>
+		<form id="global-search" role="search" autocomplete="off" action="javascript:void(0);">
+			<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+				<path fill="currentColor" d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"></path>
+			</svg>
+			<input type="search" id="global-search-input" placeholder="Search"
+				aria-label="Search your volumes" role="combobox" aria-expanded="false"
+				aria-controls="global-search-results" aria-autocomplete="list"
+				autocapitalize="none" autocorrect="off" spellcheck="false">
+			<ul id="global-search-results" class="hidden" role="listbox" aria-label="Matching volumes"></ul>
+		</form>
 		{% block right_side_header %}
 		{% endblock %}
 	</header>
@@ -83,6 +97,15 @@
 						class="{% if request.path == '/library-import' %}current-nav{% endif %}"
 					>Library Import</a>
 				</div>
+				<a
+					href="{{url_base}}/calendar"
+					class="{% if request.path == '/calendar' %}current-nav{% endif %}"
+				>
+					<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" style="font-size: 14px;">
+						<path fill="currentColor" d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm64 80v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80c-8.8 0-16 7.2-16 16zm128 0v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H336zM64 400v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V400c0-8.8-7.2-16-16-16H80c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V400c0-8.8-7.2-16-16-16H208zm112 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V400c0-8.8-7.2-16-16-16H336c-8.8 0-16 7.2-16 16z"></path>
+					</svg>
+					Calendar
+				</a>
 				<a href="{{url_base}}/activity/queue">
 					<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="font-size: 14px;">
 						<path fill="currentColor" d="M464 256A208 208 0 1 1 48 256a208 208 0 1 1 416 0zM0 256a256 256 0 1 0 512 0A256 256 0 1 0 0 256zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"></path>
@@ -134,6 +157,10 @@
 						href="{{url_base}}/settings/general"
 						class="{% if request.path == '/settings/general' %}current-nav{% endif %}"
 					>General</a>
+					<a
+						href="{{url_base}}/settings/logs"
+						class="{% if request.path == '/settings/logs' %}current-nav{% endif %}"
+					>Logs</a>
 				</div>
 				<a href="{{url_base}}/system/status">
 					<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" style="font-size: 14px;">

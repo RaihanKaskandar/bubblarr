@@ -7,7 +7,8 @@ Search for volumes/issues and fetch metadata for them on ComicVine
 from asyncio import gather, run, sleep
 from json import JSONDecodeError
 from re import IGNORECASE, compile
-from typing import Any, AsyncGenerator, Dict, Iterable, List, Sequence, Union
+from typing import (Any, AsyncGenerator, Dict, Iterable, List, Sequence,
+                    Tuple, Union)
 
 from aiohttp import ContentTypeError
 from aiohttp.client_exceptions import ClientError
@@ -371,7 +372,14 @@ class ComicVine:
             'issue_number': issue_data['issue_number'].replace('/', '-').strip(),
             'calculated_issue_number': calculated_issue_number,
             'title': normalise_string(issue_data['name'] or '') or None,
-            'date': issue_data[self.date_type] or None,
+            # Fall back to the other date type, as e.g. older issues often
+            # have no store date
+            'date': (
+                issue_data[self.date_type]
+                or issue_data['cover_date']
+                or issue_data['store_date']
+                or None
+            ),
             'description': _clean_description(
                 issue_data['description'],
                 short=True
@@ -457,7 +465,7 @@ class ComicVine:
             try:
                 async with AsyncSession() as session:
                     # Simply make a call to any endpoint to check. This endpoint
-                    # isn't used by Kapowarr so by using it now we don't
+                    # isn't used by Bubblarr so by using it now we don't
                     # unnecessarily get closer to the rate limit of
                     # important endpoints.
                     await self.__call_api(
@@ -676,6 +684,89 @@ class ComicVine:
                             ))
 
             return issue_infos
+
+    async def fetch_releases(
+        self,
+        start: str,
+        end: str,
+        max_issues: int = 500
+    ) -> List[Tuple[VolumeMetadata, List[Dict[str, Any]]]]:
+        """Get the issues that are (or will be) in stores between two dates,
+        grouped per volume. Covers are not downloaded, only linked.
+
+        Args:
+            start (str): The first store date, as `YYYY-MM-DD`.
+            end (str): The last store date, as `YYYY-MM-DD`.
+            max_issues (int, optional): The maximum amount of issues to fetch.
+                Defaults to 500.
+
+        Raises:
+            InvalidKeyValue: The API key is not valid.
+            MetadataSourceRateLimitReached: The rate limit is reached.
+
+        Returns:
+            List[Tuple[VolumeMetadata, List[Dict[str, Any]]]]: The volumes
+                (without issues and cover) with their issues in the period,
+                each issue having the keys `comicvine_id`, `issue_number` and
+                `date`.
+        """
+        issue_params = {
+            'field_list': 'id,issue_number,store_date,volume',
+            'filter': f'store_date:{start}|{end}',
+            # A unique sort, so that pages fetched at the same time don't
+            # overlap (many issues share a store date)
+            'sort': 'id:asc',
+        }
+        raw_issues: List[Dict[str, Any]] = []
+        async with AsyncSession() as session:
+            first = await self.__call_api(session, '/issues', issue_params)
+            raw_issues.extend(first['results'])
+            total = min(first['number_of_total_results'], max_issues)
+            offsets = range(100, total, 100)
+            if offsets:
+                responses = await gather(*(
+                    self.__call_api(
+                        session, '/issues', {**issue_params, 'offset': o},
+                        {'results': []}
+                    )
+                    for o in offsets
+                ))
+                for response in responses:
+                    raw_issues.extend(response['results'])
+
+            by_volume: Dict[int, List[Dict[str, Any]]] = {}
+            seen_issues = set()
+            for issue in raw_issues:
+                if not issue.get('volume') or issue['id'] in seen_issues:
+                    continue
+                seen_issues.add(issue['id'])
+                by_volume.setdefault(int(issue['volume']['id']), []).append({
+                    'comicvine_id': int(issue['id']),
+                    'issue_number': (issue['issue_number'] or '').strip(),
+                    'date': issue['store_date'],
+                })
+
+            volume_ids = [str(i) for i in by_volume]
+            responses = await gather(*(
+                self.__call_api(
+                    session,
+                    '/volumes',
+                    {
+                        'field_list': self.volume_field_list,
+                        'filter': f'id:{"|".join(id_batch)}'
+                    },
+                    {'results': []}
+                )
+                for id_batch in batched(volume_ids, 100)
+            ))
+
+        result = []
+        for response in responses:
+            for raw_volume in response['results']:
+                volume = self.__format_volume_output(raw_volume)
+                volume['cover'] = None
+                result.append((volume, by_volume.get(volume['comicvine_id'], [])))
+        return result
 
     async def __search_volume(
         self, query: str

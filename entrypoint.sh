@@ -16,17 +16,17 @@ then
 
 else
     # Switch to non-root user
-    echo "Preparing Kapowarr to run as $PUID:$PGID..."
+    echo "Preparing Bubblarr to run as $PUID:$PGID..."
 
-    groupmod -o -g "$PGID" kapowarr
-    usermod -o -u "$PUID" -g "$PGID" kapowarr
+    groupmod -o -g "$PGID" bubblarr
+    usermod -o -u "$PUID" -g "$PGID" bubblarr
 
     echo "Ensuring ownership..."
-    chown -R kapowarr:kapowarr "$DB_DIR" "$LOG_DIR" "$TD_DIR" || {
+    chown -R bubblarr:bubblarr "$DB_DIR" "$LOG_DIR" "$TD_DIR" || {
         echo "Failed to update ownership to $PUID:$PGID"
         exit 1
     }
 
     echo "Running as $PUID:$PGID"
-    exec gosu kapowarr "$@"
+    exec gosu bubblarr "$@"
 fi

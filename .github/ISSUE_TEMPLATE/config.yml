@@ -1,11 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Documentation Hub
-    url: https://casvt.github.io/Kapowarr/
-    about: You can find the documentation for Kapowarr here.
-  - name: Discord Server
-    url: https://discord.gg/5gWtW3ekgZ
-    about: Get in contact on the discord server.
-  - name: Subreddit
-    url: https://www.reddit.com/r/kapowarr/
-    about: Get in contact on the subreddit.
+  - name: Documentation
+    url: https://github.com/RaihanKaskandar/bubblarr/tree/main/docs/src
+    about: The documentation for Bubblarr.
+  - name: Kapowarr (the original project)
+    url: https://github.com/Casvt/Kapowarr
+    about: Bubblarr is a fork of Kapowarr. Please only report problems there if they also happen in Kapowarr itself.

@@ -21,12 +21,20 @@ from backend.internals.settings import Settings
     (ECF.TITLE, ECF.ENABLED, ECF.BASE_URL, ECF.USERNAME, ECF.PASSWORD)
 )
 class qBittorrent(BaseExternalClient):
+    # Torrent states of qBittorrent 4 and 5. Version 5 renamed "paused" to
+    # "stopped". States that aren't listed are treated as downloading, never
+    # as finished, so that a download is never imported (and deleted) early.
     state_mapping = {
         'queuedDL': DownloadState.QUEUED_STATE,
         'pausedDL': DownloadState.PAUSED_STATE,
+        'stoppedDL': DownloadState.PAUSED_STATE,
         'checkingDL': DownloadState.DOWNLOADING_STATE,
         'metaDL': DownloadState.DOWNLOADING_STATE,
+        'forcedMetaDL': DownloadState.DOWNLOADING_STATE,
+        'stalledDL': DownloadState.DOWNLOADING_STATE,
+        'allocating': DownloadState.DOWNLOADING_STATE,
         'checkingResumeData': DownloadState.DOWNLOADING_STATE,
+        'moving': DownloadState.DOWNLOADING_STATE,
         'downloading': DownloadState.DOWNLOADING_STATE,
         'forcedDL': DownloadState.DOWNLOADING_STATE,
 
@@ -37,7 +45,9 @@ class qBittorrent(BaseExternalClient):
         'stalledUP': DownloadState.SEEDING_STATE,
 
         'pausedUP': DownloadState.IMPORTING_STATE,
-        'error': DownloadState.FAILED_STATE
+        'stoppedUP': DownloadState.IMPORTING_STATE,
+        'error': DownloadState.FAILED_STATE,
+        'missingFiles': DownloadState.FAILED_STATE
     }
 
     def __init__(self, client_id: int) -> None:
@@ -179,9 +189,21 @@ class qBittorrent(BaseExternalClient):
 
             state = self.state_mapping.get(
                 torrent['state'],
-                DownloadState.IMPORTING_STATE
+                DownloadState.DOWNLOADING_STATE
             )
-            if torrent['state'] in ('metaDL', 'stalledDL', 'checkingDL'):
+            if (
+                state in (
+                    DownloadState.SEEDING_STATE,
+                    DownloadState.IMPORTING_STATE
+                )
+                and torrent['progress'] < 1
+            ):
+                # Not actually complete (e.g. only some files selected)
+                state = DownloadState.DOWNLOADING_STATE
+
+            if torrent['state'] in (
+                'metaDL', 'forcedMetaDL', 'stalledDL', 'checkingDL'
+            ):
                 # Torrent is failing
                 if self.fail_timestamps[t_hash] is None:
                     self.fail_timestamps[t_hash] = round(time())
@@ -197,11 +219,25 @@ class qBittorrent(BaseExternalClient):
             else:
                 self.fail_timestamps[t_hash] = None
 
+            # The name that the download is saved under. qBittorrent keeps
+            # the name given in the magnet link as the torrent name, but
+            # saves the content under the real name of the torrent.
+            name = None
+            content_path = (torrent.get('content_path') or '').rstrip('/\\')
+            save_path = (torrent.get('save_path') or '').rstrip('/\\')
+            if (
+                torrent['state'] != 'metaDL'
+                and content_path
+                and content_path != save_path
+            ):
+                name = content_path.replace('\\', '/').split('/')[-1]
+
             self.statuses[t_hash] = {
                 'size': torrent['total_size'],
                 'progress': round(torrent['progress'] * 100, 2),
                 'speed': torrent['dlspeed'],
-                'state': state
+                'state': state,
+                'name': name
             }
 
         self.last_update = time()

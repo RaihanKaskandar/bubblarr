@@ -1,7 +1,27 @@
-async function usingApiKey(redirect=true) {
-	const key_data = JSON.parse(localStorage.getItem('kapowarr'));
+// localStorage can be empty (e.g. a web app that was just added to the
+// home screen on iOS gets its own storage) or unavailable, so never assume
+// that it's filled.
+function readStorage() {
+	try {
+		const data = JSON.parse(localStorage.getItem('bubblarr'));
+		if (data && typeof data === 'object')
+			return data;
+	} catch (e) {};
+	return {'api_key': null, 'last_login': 0};
+};
 
-	if (key_data.api_key === null
+function writeStorage(data) {
+	try {
+		localStorage.setItem('bubblarr', JSON.stringify(data));
+	} catch (e) {
+		console.log(e);
+	};
+};
+
+async function usingApiKey(redirect=true) {
+	const key_data = readStorage();
+
+	if (!key_data.api_key
 	|| (key_data.last_login < (Date.now() / 1000 - 86400))) {
 
 		return fetch(`${url_base}/api/auth`, {
@@ -16,7 +36,7 @@ async function usingApiKey(redirect=true) {
 			.then(json => {
 				key_data.api_key = json.result.api_key;
 				key_data.last_login = Date.now() / 1000;
-				localStorage.setItem('kapowarr', JSON.stringify(key_data));
+				writeStorage(key_data);
 				return json.result.api_key;
 			})
 			.catch(e => {
@@ -33,4 +53,3 @@ async function usingApiKey(redirect=true) {
 		return key_data.api_key;
 	};
 };
-

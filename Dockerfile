@@ -41,8 +41,8 @@ RUN --mount=from=builder,source=/wheels,target=/wheels \
     --mount=type=cache,target=/root/.cache/pip,sharing=private \
     pip3 install --no-index --find-links=/wheels -r /wheels/requirements.txt
 
-RUN groupadd -g 1000 kapowarr && \
-    useradd -u 1000 -g kapowarr -d /nonexistent -M -s /bin/bash kapowarr && \
+RUN groupadd -g 1000 bubblarr && \
+    useradd -u 1000 -g bubblarr -d /nonexistent -M -s /bin/bash bubblarr && \
     mkdir -p /app/db /app/logs /app/temp_downloads
 
 COPY --chmod=755 . .
@@ -54,4 +54,4 @@ ENV PUID=0 \
 EXPOSE 5656
 
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["python3", "/app/Kapowarr.py", "--LogFolder", "/app/logs"]
+CMD ["python3", "/app/Bubblarr.py", "--LogFolder", "/app/logs"]

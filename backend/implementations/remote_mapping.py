@@ -278,7 +278,7 @@ class RemoteMappings:
         external_download_client_id: int,
         path: str
     ) -> str:
-        """Translate a path from Kapowarr to one for the external download
+        """Translate a path from Bubblarr to one for the external download
         client. Returns original path if no mapping matches.
 
         Args:
@@ -312,7 +312,7 @@ class RemoteMappings:
         path: str
     ) -> str:
         """Translate a path from the external download client to one for
-        Kapowarr. Returns original path if no mapping matches.
+        Bubblarr. Returns original path if no mapping matches.
 
         Args:
             external_download_client_id (int): The ID of the external download
@@ -351,7 +351,7 @@ class RemoteMappings:
             external_download_client_id (int): The ID of the external download
                 client that the mapping is for.
             remote_path (str): The path how the external client sees it.
-            local_path (str): The path how Kapowarr sees it.
+            local_path (str): The path how Bubblarr sees it.
 
         Raises:
             FolderNotFound: The local path could not be found.

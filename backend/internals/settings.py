@@ -120,11 +120,25 @@ class PublicSettingsValues:
 
     download_folder: str = folder_path('temp_downloads')
     concurrent_direct_downloads: int = 1
-    failing_download_timeout: int = 0
+    failing_download_timeout: int = 3600
+    "Seconds. Dead torrents (e.g. without seeders) would otherwise never fail"
     seeding_handling: SeedingHandling = SeedingHandling.COPY
     delete_completed_downloads: bool = True
 
-    date_type: DateType = DateType.COVER_DATE
+    date_type: DateType = DateType.STORE_DATE
+    "The date when an issue is in stores, used for e.g. the release calendar"
+
+    comicgeeks_username: str = ''
+    comicgeeks_password: str = ''
+    comicgeeks_sync_collection: bool = True
+    "Mark issues as collected on League of Comic Geeks when downloaded"
+    comicgeeks_pull_list: bool = True
+    "Show the pull list of League of Comic Geeks in the calendar"
+
+    webhook_urls: CommaList = field(default_factory=lambda: CommaList(''))
+    "URLs that events (e.g. an imported download) are POSTed to"
+    webhook_secret: str = ''
+    "Used to sign webhook requests (X-Bubblarr-Signature)"
 
     def todict(self, to_public: bool = True) -> Dict[str, Any]:
         """Convert the dataclass to a dictionary.
@@ -143,7 +157,10 @@ class PublicSettingsValues:
             return result
 
         for k, v in result.items():
-            if k in ("auth_username", "auth_password", "proxy_password") and v:
+            if k in (
+                "auth_username", "auth_password", "proxy_password",
+                "comicgeeks_password", "webhook_secret"
+            ) and v:
                 result[k] = Constants.CREDENTIAL_REPLACEMENT
 
             if isinstance(v, BaseEnum):
@@ -451,6 +468,23 @@ class Settings(metaclass=Singleton):
         elif key == 'proxy_password':
             if value == Constants.CREDENTIAL_REPLACEMENT:
                 converted_value = self.sv.proxy_password
+
+        elif key == 'comicgeeks_password':
+            if value == Constants.CREDENTIAL_REPLACEMENT:
+                converted_value = self.sv.comicgeeks_password
+
+        elif key == 'webhook_secret':
+            if value == Constants.CREDENTIAL_REPLACEMENT:
+                converted_value = self.sv.webhook_secret
+
+        elif key == 'webhook_urls':
+            urls = [u.strip() for u in value if u.strip()]
+            if not all(
+                u.startswith(('http://', 'https://')) and ',' not in u
+                for u in urls
+            ):
+                raise InvalidKeyValue(key, value)
+            converted_value = CommaList(urls)
 
         elif key == 'db_backup_amount':
             if value < 0:

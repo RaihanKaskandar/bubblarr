@@ -1,6 +1,13 @@
 .loading-container {
-	height: 100%;
 	width: 100%;
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.loading-container > * {
+	flex: 1 1 auto;
 }
 
 #volume-content {
@@ -81,7 +88,7 @@ This flows better for ARIA.
 	padding: .3rem;
 	border-radius: 3px;
 	background-color: var(--accent-color);
-	color: var(--nav-background-color);
+	color: var(--on-accent-color);
 
 	font-size: .9rem;
 }
@@ -254,6 +261,11 @@ tbody .issue-title:hover {
 	text-wrap-mode: nowrap;
 }
 
+.seeders-column {
+	width: 4.5rem;
+	text-align: center;
+}
+
 .search-action-column {
 	width: 9rem;
 	display: flex;
@@ -362,7 +374,7 @@ tbody .issue-title:hover {
 
 #manage-window:has(input[type="checkbox"]:checked) #show-issue-match {
 	background-color: var(--accent-color);
-	color: var(--nav-background-color);
+	color: var(--on-accent-color);
 }
 
 #submit-match-issues {
@@ -415,6 +427,7 @@ tbody .issue-title:hover {
 	padding: .5rem 1rem;
 	border-radius: 6px;
 	background-color: var(--accent-color);
+	color: var(--on-accent-color);
 }
 
 .f-filepath,
@@ -484,4 +497,36 @@ tbody .issue-title:hover {
 	.volume-info > img {
 		display: none;
 	}
+}
+
+/* Manual search: rejected releases are hidden unless asked for */
+#search-summary {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: .5rem 1rem;
+	margin-bottom: 1rem;
+}
+
+#show-rejected-label {
+	display: flex;
+	align-items: center;
+	gap: .4rem;
+	color: var(--dimmed-text-color);
+	font-size: .9rem;
+	cursor: pointer;
+}
+
+#search-result-table:not(.show-rejected) .rejected-result {
+	display: none;
+}
+
+.rejected-result {
+	opacity: .65;
+}
+
+.rejection-reason {
+	color: var(--dimmed-text-color);
+	font-size: .8rem;
 }

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "base.html" import icon_button %}
+{% block title %}Calendar{% endblock %}
+{% block css %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+{% endblock %}
+{% block js %}
+	<script src="{{ url_for('static', filename='js/calendar.js') }}" defer></script>
+{% endblock %}
+
+{% block main %}
+<main>
+	<section class="tool-bar-container" aria-label="Tool bar">
+		<div class="tool-bar">
+			{{ icon_button("refresh-button", "Refresh the calendar", "refresh.svg", "Refresh") }}
+			<label id="monitored-only-container" title="Only show monitored issues">
+				<input type="checkbox" id="monitored-only-input">
+				<span>Monitored only</span>
+			</label>
+		</div>
+	</section>
+	<div class="main-window">
+		<div id="calendar-header">
+			<div id="calendar-nav">
+				<button id="previous-button" type="button" title="Previous" aria-label="Previous">&lsaquo;</button>
+				<button id="today-button" type="button">Today</button>
+				<button id="next-button" type="button" title="Next" aria-label="Next">&rsaquo;</button>
+			</div>
+			<h2 id="calendar-title"></h2>
+			<div id="view-switcher" role="tablist" aria-label="Calendar view">
+				<button type="button" data-view="month" role="tab">Month</button>
+				<button type="button" data-view="week" role="tab">Week</button>
+				<button type="button" data-view="agenda" role="tab">Agenda</button>
+			</div>
+		</div>
+
+		<p id="pull-list-error" class="hidden" role="status"></p>
+		<div id="calendar-grid" class="hidden" aria-live="polite"></div>
+		<div id="calendar-agenda" class="hidden" aria-live="polite"></div>
+		<p id="calendar-empty" class="hidden">No issues are released in this period.</p>
+
+		<ul id="calendar-legend" aria-label="Legend">
+			<li><span class="legend-color status-downloaded"></span>Downloaded</li>
+			<li><span class="legend-color status-downloading"></span>Downloading</li>
+			<li><span class="legend-color status-missing"></span>Missing</li>
+			<li><span class="legend-color status-upcoming"></span>Upcoming</li>
+			<li><span class="legend-color status-unmonitored"></span>Unmonitored</li>
+			<li><span class="legend-color status-not-in-library"></span>Pulled, not in library</li>
+		</ul>
+	</div>
+</main>
+{% endblock main %}

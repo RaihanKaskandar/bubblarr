@@ -17,7 +17,8 @@ class SearchActionPlanner:
         self,
         volume_data: VolumeData,
         issue_data: List[IssueData],
-        wanted_issues: List[int]
+        wanted_issues: List[int],
+        search_issues_without_volume_match: bool = False
     ) -> None:
         """Initialise the planner.
 
@@ -28,6 +29,13 @@ class SearchActionPlanner:
                 volume.
             wanted_issues (List[int]): The issue IDs of the issues that we want
                 search results for.
+            search_issues_without_volume_match (bool, optional): Search for
+                the individual issues, even if searching for the volume didn't
+                give any matches. Useful for indexers where releases are mostly
+                single issues (e.g. torrent sites), instead of pages with the
+                whole volume (e.g. GetComics). The search then stops after
+                multiple issues in a row couldn't be found.
+                Defaults to False.
         """
         self.volume_data = volume_data
         self.issue_data = {
@@ -35,6 +43,9 @@ class SearchActionPlanner:
             for issue in issue_data
         }
         self.wanted_issues = wanted_issues
+        self.search_issues_without_volume_match = (
+            search_issues_without_volume_match
+        )
 
         self.using_alt_title = False
         self.max_variations = 1
@@ -119,7 +130,10 @@ class SearchActionPlanner:
         ):
             # Match found for issue in issue phase. Next issue.
             self.processed_issues.add(self.current_issue)
-            self.current_issue = self.wanted_issues[0]
+            next_issue = self._next_issue()
+            if next_issue is None:
+                return (SearchAction.STOP, self._build_keys())
+            self.current_issue = next_issue
             self.page = 1
             self.variation = 1
             self.sequential_failed_variations = 0
@@ -142,15 +156,21 @@ class SearchActionPlanner:
                 self.sequential_failed_variations = 0
                 return (SearchAction.NEXT_TITLE_ALIAS, self._build_keys())
 
-            if not self.found_a_match:
+            if (
+                not self.found_a_match
+                and not self.search_issues_without_volume_match
+            ):
                 # No variations yielded matches, not even with alias title
                 return (SearchAction.STOP, self._build_keys())
 
             if self.volume_phase:
                 # No volume queries left but still wanted issues. Search for
                 # each remaining issue individually.
+                next_issue = self._next_issue()
+                if next_issue is None:
+                    return (SearchAction.STOP, self._build_keys())
                 self.volume_phase = False
-                self.current_issue = self.wanted_issues[0]
+                self.current_issue = next_issue
                 self.processed_issues.add(self.current_issue)
                 self.page = 1
                 self.variation = 1
@@ -166,7 +186,10 @@ class SearchActionPlanner:
 
                 # Continue to next one.
                 self.processed_issues.add(self.current_issue)
-                self.current_issue = self.wanted_issues[0]
+                next_issue = self._next_issue()
+                if next_issue is None:
+                    return (SearchAction.STOP, self._build_keys())
+                self.current_issue = next_issue
                 self.page = 1
                 self.variation = 1
                 self.sequential_failed_variations = 0
@@ -181,6 +204,21 @@ class SearchActionPlanner:
         self.variation += 1
         self.page = 1
         return (SearchAction.NEXT_QUERY_VARIATION, self._build_keys())
+
+    def _next_issue(self) -> Union[int, None]:
+        """Get the next wanted issue that hasn't been searched for yet.
+
+        Returns:
+            Union[int, None]: The ID of the issue, or None if there are none.
+        """
+        return next(
+            (
+                i
+                for i in self.wanted_issues
+                if i not in self.processed_issues
+            ),
+            None
+        )
 
     def _build_keys(self) -> QueryKeys:
         """Build the query keys to be supplied to the query builder, based on

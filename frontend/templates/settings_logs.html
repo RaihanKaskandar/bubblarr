@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "base.html" import icon_button %}
+{% block title %}Logs{% endblock %}
+{% block css %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/logs.css') }}">
+{% endblock %}
+{% block js %}
+	<script src="{{ url_for('static', filename='js/settings_logs.js') }}" defer></script>
+{% endblock %}
+
+{% block main %}
+<main>
+	<section class="tool-bar-container" aria-label="Tool bar">
+		<div class="tool-bar">
+			{{ icon_button("refresh-button", "Reload the logs", "refresh.svg", "Refresh") }}
+			<button id="pause-button" type="button" title="Pause or resume live updates" aria-pressed="false">
+				<svg id="pause-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path fill="currentColor" d="M48 64C21.5 64 0 85.5 0 112V400c0 26.5 21.5 48 48 48H80c26.5 0 48-21.5 48-48V112c0-26.5-21.5-48-48-48H48zm192 0c-26.5 0-48 21.5-48 48V400c0 26.5 21.5 48 48 48h32c26.5 0 48-21.5 48-48V112c0-26.5-21.5-48-48-48H240z"/></svg>
+				<svg id="play-icon" class="hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
+				<div aria-hidden="true"><p id="pause-label">Pause</p></div>
+			</button>
+			<a id="download-button" title="Download the complete log file" href="">
+				<img src="{{ url_for('static', filename='img/download.svg') }}" alt="">
+				<div aria-hidden="true"><p>Download</p></div>
+			</a>
+			<div id="log-filters">
+				<label for="level-input" class="hidden">Level</label>
+				<select id="level-input" title="Minimum level">
+					<option value="debug">All levels</option>
+					<option value="info" selected>Info and up</option>
+					<option value="warning">Warnings and errors</option>
+					<option value="error">Errors only</option>
+				</select>
+				<input type="search" id="log-search-input" placeholder="Filter, e.g. batman" aria-label="Filter the logs" spellcheck="false">
+			</div>
+		</div>
+	</section>
+	<div class="main-window">
+		<p id="log-summary" aria-live="polite"></p>
+		<div class="log-table-container">
+			<table id="log-table">
+				<thead>
+					<tr>
+						<th class="log-level-column" scope="col"><span class="hidden">Level</span></th>
+						<th class="log-time-column" scope="col">Time</th>
+						<th scope="col">Message</th>
+						<th class="log-source-column" scope="col">Source</th>
+					</tr>
+				</thead>
+				<tbody id="log-list"></tbody>
+			</table>
+		</div>
+		<p id="log-empty" class="hidden">No log entries match.</p>
+	</div>
+</main>
+{% endblock main %}

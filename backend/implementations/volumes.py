@@ -1015,6 +1015,64 @@ class Library:
         """).fetchonedict() or {}
         return result
 
+    @staticmethod
+    def get_calendar(
+        start: str,
+        end: str,
+        monitored_only: bool = False
+    ) -> List[Dict[str, Any]]:
+        """Get the issues that are released between two dates (inclusive).
+
+        Args:
+            start (str): The first date, in the format `YYYY-MM-DD`.
+            end (str): The last date, in the format `YYYY-MM-DD`.
+            monitored_only (bool, optional): Only include issues that are
+                monitored, of volumes that are monitored.
+                Defaults to False.
+
+        Returns:
+            List[Dict[str, Any]]: The issues, sorted on date. Each issue has
+                the keys `issue_id`, `volume_id`, `volume_title`,
+                `volume_year`, `volume_number`, `issue_number`,
+                `calculated_issue_number`, `title`, `date`, `monitored` and
+                `downloaded`.
+        """
+        result = get_db().execute(
+            f"""
+            SELECT
+                i.id AS issue_id,
+                i.volume_id,
+                v.title AS volume_title,
+                v.year AS volume_year,
+                v.volume_number,
+                i.issue_number,
+                i.calculated_issue_number,
+                i.title,
+                i.date,
+                (i.monitored AND v.monitored) AS monitored,
+                EXISTS(
+                    SELECT 1
+                    FROM issues_files f
+                    WHERE f.issue_id = i.id
+                ) AS downloaded
+            FROM issues i
+            INNER JOIN volumes v
+            ON i.volume_id = v.id
+            WHERE
+                i.date BETWEEN ? AND ?
+                {'AND i.monitored = 1 AND v.monitored = 1'
+                    if monitored_only else ''}
+            ORDER BY i.date, v.title, i.calculated_issue_number;
+            """,
+            (start, end)
+        ).fetchalldict()
+
+        for issue in result:
+            issue['monitored'] = bool(issue['monitored'])
+            issue['downloaded'] = bool(issue['downloaded'])
+
+        return result
+
     @classmethod
     def get_volumes(cls) -> List[int]:
         """Get a list of the IDs of all the volumes.
@@ -1103,7 +1161,7 @@ class Library:
                 Defaults to None.
 
             special_version (Union[SpecialVersion, None], optional): Give `None`
-                to let Kapowarr determine the special version ('auto').
+                to let Bubblarr determine the special version ('auto').
                 Otherwise, give a `SpecialVersion` to override and lock the
                 special version state.
 
@@ -1269,6 +1327,10 @@ class Library:
         LOGGER.info(
             f'Added volume with CV ID {comicvine_id} and ID {volume_id}'
         )
+
+        from backend.features.webhooks import volume_added
+        volume_added(volume_id)
+
         return volume_id
 
 

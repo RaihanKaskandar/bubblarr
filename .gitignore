@@ -141,3 +141,6 @@ temp_downloads/*
 
 # Project management files
 release*.sh
+
+# Data of docker-compose.torrents.yml
+data/

@@ -47,10 +47,12 @@ class Constants:
     DB_FOLDER = ("db",)
     "Subfolder of application folder to put database in"
 
-    DB_NAME = "Kapowarr.db"
+    DB_NAME = "Bubblarr.db"
+    LEGACY_DB_NAME = "Kapowarr.db"
+    "Name of the database before the app was renamed from Kapowarr"
     "Name of database file itself"
 
-    DB_ORIGINAL_NAME = "Kapowarr_original.db"
+    DB_ORIGINAL_NAME = "Bubblarr_original.db"
     "Name of database file when backed up because a new database is imported"
 
     DB_TIMEOUT = 10.0 # seconds
@@ -65,10 +67,10 @@ class Constants:
     DB_MAX_CONCURRENT_CONNECTIONS = 32
     "Maximum allowed database connections to be open at the same time"
 
-    LOGGER_NAME = "Kapowarr"
+    LOGGER_NAME = "Bubblarr"
     "Name of the logger that is used"
 
-    LOGGER_FILENAME = "Kapowarr.log"
+    LOGGER_FILENAME = "Bubblarr.log"
     "Filename that the logs are put in"
 
     CREDENTIAL_REPLACEMENT: str = "********"
@@ -86,7 +88,7 @@ class Constants:
     ZIP_MIN_MOD_TIME = 315619200 # epoch
     "The minimum modification time that a file inside a zip should have"
 
-    DEFAULT_USERAGENT = "Kapowarr"
+    DEFAULT_USERAGENT = "Bubblarr"
     "The user agent to use when making web requests"
 
     BROWSER_USERAGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
@@ -142,7 +144,7 @@ class Constants:
     EXTERNAL_CLIENT_UPDATE_INTERVAL = 30 # seconds
     "The interval in seconds between status updates from external clients"
 
-    EXTERNAL_DOWNLOAD_TAG = "kapowarr"
+    EXTERNAL_DOWNLOAD_TAG = "bubblarr"
     "The tag to give to downloads at external clients"
 
 
@@ -309,11 +311,11 @@ class InvalidDatabaseReason(BaseEnum):
     "Database file does not exist"
 
     NOT_KAPOWARR_DB = "not_kapowarr_db"
-    "Uploaded database is not a Kapowarr database file"
+    "Uploaded database is not a Bubblarr database file"
 
     VERSION_NOT_SUPPORTED = "version_not_supported"
     """
-    Uploaded database is higher version than this Kapowarr installation can
+    Uploaded database is higher version than this Bubblarr installation can
     support
     """
 
@@ -528,6 +530,23 @@ class IndexerClientField(BaseEnum):
     over 400MB.
     """
 
+    # Torznab
+    API_KEY = "api_key"
+    "The API key for the indexer (e.g. of Jackett or Prowlarr)"
+
+    CATEGORIES = "categories"
+    "The Newznab/Torznab categories to search in (e.g. 7030 for comics)"
+
+    MIN_SEEDERS = "min_seeders"
+    "Ignore torrent releases with less seeders than this"
+
+    PRIORITY = "priority"
+    """
+    The priority of the indexer, from 1 (highest) to 50 (lowest). When
+    releases are equally good, the one from the indexer with the highest
+    priority is preferred.
+    """
+
 
 class SearchAction(BaseEnum):
     "The next course of action during a search with an indexer"
@@ -596,6 +615,8 @@ class DownloadService(BaseEnum):
     "A DDL download link straight from their own servers"
     GETCOMICS_TORRENT = "GetComics (torrent)"
     "A torrent magnet link directly on the webpage"
+    TORZNAB = "Torznab"
+    "A torrent from a Torznab indexer (e.g. via Jackett or Prowlarr)"
 
 
 class DownloadClientIdentifier(BaseEnum):
@@ -624,7 +645,7 @@ class DownloadState(BaseEnum):
     CANCELED_STATE = "canceled"
     "Download was removed from queue"
     SHUTDOWN_STATE = "shutting down"
-    "Download was stopped because Kapowarr is shutting down"
+    "Download was stopped because Bubblarr is shutting down"
 
 
 RAR_EXECUTABLES = {
@@ -688,6 +709,11 @@ class IndexerClientData(TypedDict):
     url: str
     gc_service_preference: Union['CommaList', None]
     gc_avoid_large_downloads: Union[bool, None]
+    api_key: Union[str, None]
+    categories: Union[List[int], None]
+    min_seeders: Union[int, None]
+    priority: int
+    prowlarr_synced: bool
 
 
 class SearchQuery(TypedDict):
@@ -702,6 +728,12 @@ class SearchResultData(FilenameData):
     size: int
     indexer_id: int
     indexer_title: str
+    download_type: int
+    "The `DownloadType` value of the indexer that found the result"
+    seeders: Union[int, None]
+    "Only for torrent results"
+    indexer_priority: int
+    "The priority of the indexer, 1 (highest) to 50 (lowest)"
 
 
 class SearchResultMatchData(TypedDict):
@@ -971,7 +1003,7 @@ class SearchIterationStats:
 
 # region Abstract Classes
 class KapowarrException(Exception, ABC):
-    "An exception specific to Kapowarr"
+    "An exception specific to Bubblarr"
 
     @property
     @abstractmethod
@@ -1189,12 +1221,19 @@ class IndexerClient(ABC):
         ...
 
     @abstractmethod
-    def update_indexer(self, data: Mapping[str, Any]) -> None:
+    def update_indexer(
+        self,
+        data: Mapping[str, Any],
+        run_test: bool = True
+    ) -> None:
         """Edit the indexer.
 
         Args:
             data (Mapping[str, Any]): The keys and their new values for
                 the indexer settings.
+
+            run_test (bool, optional): Test the indexer before saving.
+                Defaults to True.
 
         Raises:
             ClientNotWorking: Can't connect to client.

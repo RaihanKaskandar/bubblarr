@@ -34,7 +34,8 @@ ENGLISH_MONTHS = [
     DownloadType.DDL, 'GetComics',
     (
         ICF.TITLE, ICF.ENABLED, ICF.URL,
-        ICF.GC_SERVICE_PREFERENCE, ICF.GC_AVOID_LARGE_DOWNLOADS
+        ICF.GC_SERVICE_PREFERENCE, ICF.GC_AVOID_LARGE_DOWNLOADS,
+        ICF.PRIORITY
     ),
     allow_multiple_instances=False
 )
@@ -137,7 +138,10 @@ class GetComicsIndexer(BaseIndexerClient):
                 "display_title": article[1],
                 "size": article[2],
                 "indexer_id": self._id,
-                "indexer_title": self._title
+                "indexer_title": self._title,
+                "download_type": self.download_type.value,
+                "seeders": None,
+                "indexer_priority": self._priority
             }
             for article in self.__get_articles(soup)
         ]
@@ -200,7 +204,10 @@ class GetComicsIndexer(BaseIndexerClient):
                 "display_title": display_title,
                 "size": -1,
                 "indexer_id": self._id,
-                "indexer_title": self._title
+                "indexer_title": self._title,
+                "download_type": self.download_type.value,
+                "seeders": None,
+                "indexer_priority": self._priority
             })
 
         return result

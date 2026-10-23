@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from asyncio import gather, run
+from datetime import datetime
 from typing import Dict, List, Set, Tuple, TypedDict, TypeVar, Union
 
-from backend.base.definitions import (IndexerClient, IssueData,
-                                      MatchedSearchResultData, QueryBuilder,
+from backend.base.definitions import (DownloadType, IndexerClient,
+                                      IssueData, MatchedSearchResultData,
+                                      QueryBuilder,
                                       QueryResult, SearchAction,
                                       SearchIterationStats, SearchQuery,
                                       SearchResultData, SpecialVersion)
@@ -69,7 +71,12 @@ class SearchCoordinator:
                 "search_action_planner": SearchActionPlanner(
                     self.volume_data,
                     self.issue_data,
-                    wanted_issues
+                    wanted_issues,
+                    # Torrent releases are mostly single issues, so a search
+                    # for the volume often doesn't find them
+                    search_issues_without_volume_match=(
+                        client.download_type == DownloadType.TORRENT
+                    )
                 )
             })
 
@@ -80,7 +87,7 @@ class SearchCoordinator:
         result: MatchedSearchResultData,
         issue_year: Union[int, None] = None,
         calculated_issue_number: Union[float, None] = None
-    ) -> List[int]:
+    ) -> List[float]:
         """Give a search result a rank, to sort it on.
 
         Args:
@@ -95,7 +102,8 @@ class SearchCoordinator:
                 Defaults to None.
 
         Returns:
-            List[int]: A list of numbers which determines the ranking of the result.
+            List[float]: A list of numbers which determines the ranking of the
+                result.
         """
         title = self.volume_data.title
         volume_number = self.volume_data.volume_number
@@ -178,17 +186,30 @@ class SearchCoordinator:
                 rating.append(3)
 
         else:
-            # Search was for volume
+            # Search was for volume. Always add two values, so that the
+            # values after it line up between results.
             if isinstance(result['issue_number'], tuple):
                 rating.append(
                     1.0
                     /
                     (result['issue_number'][1] - result['issue_number'][0] + 1)
                 )
+                rating.append(0)
 
             elif isinstance(result['issue_number'], float):
                 rating.append(1)
                 rating.append(result["issue_number"])
+
+            else:
+                # Special version, covers everything
+                rating.append(-1)
+                rating.append(0)
+
+        # Prefer the indexer with the highest priority (lowest number)
+        rating.append(result.get('indexer_priority', 25))
+
+        # Prefer torrents with more seeders
+        rating.append(-(result.get('seeders') or 0))
 
         return rating
 
@@ -204,12 +225,18 @@ class SearchCoordinator:
             for team in self.indexers
         ]
 
-        # Remove indexers that should stop
-        for idx, (action, _) in list(enumerate(actions)):
-            if action == SearchAction.STOP:
-                del actions[idx]
-                await self.indexers[idx]["indexer"].shutdown()
-                del self.indexers[idx]
+        # Remove indexers that should stop. Build new lists instead of deleting
+        # by index, as multiple indexers can stop in the same iteration.
+        remaining_actions = []
+        remaining_indexers: List[IndexerTeam] = []
+        for action, team in zip(actions, self.indexers):
+            if action[0] == SearchAction.STOP:
+                await team["indexer"].shutdown()
+            else:
+                remaining_actions.append(action)
+                remaining_indexers.append(team)
+        actions = remaining_actions
+        self.indexers = remaining_indexers
 
         queries = [
             team["query_builder"].next_query(action, query_keys)
@@ -342,9 +369,25 @@ def manual_search(
         wanted_issues = [issue_id]
         issue_number = volume.get_issue(issue_id).get_data().issue_number
     else:
-        wanted_issues = [
-            issue.id
-            for issue in volume.get_issues(_skip_files=True)
+        # Search for released issues that are not downloaded yet first, as an
+        # issue-by-issue search stops after multiple issues aren't found.
+        today = datetime.now().strftime("%Y-%m-%d")
+        all_issues = sorted(
+            volume.get_issues(_skip_files=True),
+            key=lambda i: i.calculated_issue_number
+        )
+        open_ids = {i[0] for i in volume.get_open_issues()}
+        released_open = [
+            i.id for i in all_issues
+            if i.id in open_ids and (i.date or '') <= today
+        ]
+        unreleased_open = [
+            i.id for i in all_issues
+            if i.id in open_ids and i.id not in released_open
+        ]
+        wanted_issues = released_open + unreleased_open + [
+            i.id for i in all_issues
+            if i.id not in open_ids
         ]
         issue_number = None
 
@@ -446,16 +489,25 @@ def auto_search(
     volume_issues = volume.get_issues(_skip_files=True)
     volume_issues.sort(key=lambda i: i.calculated_issue_number)
 
+    volume_name = f'{volume_data.title} ({volume_data.year})'
+    issue_name = ''
+    if issue_id:
+        issue_name = next(
+            (f' #{i.issue_number}' for i in volume_issues if i.id == issue_id),
+            f' issue {issue_id}'
+        )
+
     LOGGER.info(
-        'Starting auto search for volume %d %s',
-        volume_id,
-        f'issue {issue_id}' if issue_id else ''
+        'Starting auto search for %s%s (volume %d)',
+        volume_name, issue_name, volume_id
     )
 
     searchable_issues: List[Tuple[int, float]] = []
     if not volume_data.monitored:
         # Volume is unmonitored so don't auto search
-        pass
+        LOGGER.info(
+            'Not searching for %s: the volume is unmonitored', volume_name
+        )
 
     elif issue_id is None:
         # Auto search volume
@@ -473,6 +525,11 @@ def auto_search(
     if not searchable_issues:
         # No issues to search for
         result = []
+        if volume_data.monitored:
+            LOGGER.info(
+                'Not searching for %s%s: nothing is monitored and missing',
+                volume_name, issue_name
+            )
         LOGGER.debug(f'Auto search results: {result}')
         return result
 
@@ -492,6 +549,9 @@ def auto_search(
     ):
         # We're searching for one "item", so just grab first search result.
         result = search_results[:1] if search_results else []
+        _log_auto_search_result(
+            volume_name + issue_name, len(search_results), result
+        )
         LOGGER.debug('Auto search results: %s', result)
         return result
 
@@ -503,5 +563,34 @@ def auto_search(
         volume_issues
     )
 
+    _log_auto_search_result(
+        volume_name, len(search_results), chosen_downloads
+    )
     LOGGER.debug('Auto search results: %s', chosen_downloads)
     return chosen_downloads
+
+
+def _log_auto_search_result(
+    name: str,
+    matching: int,
+    chosen: List[MatchedSearchResultData]
+) -> None:
+    if not chosen:
+        LOGGER.info(
+            'Auto search for %s found nothing to download '
+            '(%d matching results)',
+            name, matching
+        )
+        return
+
+    LOGGER.info(
+        'Auto search for %s chose %d of %d matching results: %s',
+        name, len(chosen), matching,
+        '; '.join(
+            f'{r["display_title"]} [{r["indexer_title"]}'
+            + (f', {r["seeders"]} seeders' if r.get("seeders") is not None else '')
+            + ']'
+            for r in chosen
+        )
+    )
+    return

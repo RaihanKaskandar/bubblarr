@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from multiprocessing import SimpleQueue
 from os import urandom
+from os.path import getmtime
 from threading import Thread, Timer
 from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable,
                     List, Mapping, Type, TypeVar, Union)
@@ -59,7 +60,7 @@ class ThreadedTaskDispatcher(TTD):
 
     def shutdown(self, cancel_pending: bool = True, timeout: int = 5) -> bool:
         print()
-        LOGGER.info('Shutting down Kapowarr')
+        LOGGER.info('Shutting down Bubblarr')
 
         WebSocket().disconnect_all()
 
@@ -84,6 +85,7 @@ class Server(metaclass=Singleton):
             Flask: The instance.
         """
         from frontend.api import api
+        from frontend.mylar_compat import mylar_compat
         from frontend.ui import ui
 
         app = Flask(
@@ -144,9 +146,32 @@ class Server(metaclass=Singleton):
         def internal_error(e):
             return {'error': 'InternalError', 'result': {}}, 500
 
+        # Version the URLs of static files, so that browsers (and proxies
+        # like Cloudflare that set a long browser cache time) fetch the new
+        # CSS and JS right after an update instead of using an old copy.
+        static_versions: Dict[str, str] = {}
+
+        @app.url_defaults
+        def version_static_files(endpoint: str, values: Dict[str, Any]) -> None:
+            if endpoint != 'static' or 'filename' not in values:
+                return
+            filename = values['filename']
+            if filename not in static_versions:
+                try:
+                    static_versions[filename] = str(int(getmtime(
+                        folder_path('frontend', 'static', filename)
+                    )))
+                except OSError:
+                    static_versions[filename] = ''
+            if static_versions[filename]:
+                values['v'] = static_versions[filename]
+            return
+
         # Add endpoints
         app.register_blueprint(ui)
         app.register_blueprint(api, url_prefix=Constants.API_PREFIX)
+        # Mylar compatible API, for Prowlarr indexer sync (on /api itself)
+        app.register_blueprint(mylar_compat)
 
         # Setup db handling
         app.teardown_appcontext(close_db)
@@ -188,7 +213,7 @@ class Server(metaclass=Singleton):
             threads=Constants.HOSTING_THREADS
         )
 
-        LOGGER.info(f'Kapowarr running on http://{host}:{port}{self.url_base}')
+        LOGGER.info(f'Bubblarr running on http://{host}:{port}{self.url_base}')
         self.server.run()
 
         return self.__start_type
@@ -222,7 +247,7 @@ class Server(metaclass=Singleton):
         """Same as `self.shutdown()`, but restart instead of shutting down.
 
         Args:
-            start_type (StartType, optional): Why Kapowarr should restart.
+            start_type (StartType, optional): Why Bubblarr should restart.
                 Defaults to StartType.RESTART.
         """
         self.__start_type = start_type

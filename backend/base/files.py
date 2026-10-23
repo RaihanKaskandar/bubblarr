@@ -683,7 +683,7 @@ def set_volume_folder_permissions(
             without the execution bit, are applied to the files.
     """
     # We can't set the permissions if we don't own the file as the user. This
-    # doesn't happen in Kapowarr, as we only change the owner group, but the
+    # doesn't happen in Bubblarr, as we only change the owner group, but the
     # user could manually change it.
 
     if get_os_type() not in (OSType.LINUX, OSType.MACOS):
@@ -735,7 +735,7 @@ def set_volume_folder_owner_group(
             or a group number (e.g. `'1000'`).
     """
     # We can't change the group ownership if the running user isn't part of the
-    # target ownergroup. This doesn't happen in Kapowarr, but the user could
+    # target ownergroup. This doesn't happen in Bubblarr, but the user could
     # manually change it.
 
     if get_os_type() not in (OSType.LINUX, OSType.MACOS):

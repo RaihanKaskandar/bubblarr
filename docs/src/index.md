@@ -1,12 +1,12 @@
 ---
-description: The Official Kapowarr Documentation Hub
+description: The Official Bubblarr Documentation Hub
 hide:
   - navigation
   - toc
 ---
-# Kapowarr Documentation Hub
+# Bubblarr Documentation Hub
 
-__Kapowarr is a software to build and manage a comic book library, fitting in the *arr suite of software.__
+__Bubblarr is a software to build and manage a comic book library, fitting in the *arr suite of software. It searches torrent sites via Jackett or Prowlarr, and GetComics.__
 
 <div class="button-container">
   <a href="./installation/installation">Installation and Updating</a>
@@ -15,7 +15,6 @@ __Kapowarr is a software to build and manage a comic book library, fitting in th
   <a href="./other_docs/faq">FAQ</a>
 </div>
 
-## Support
+## Credits
 
-- For support, a [Discord server](https://discord.gg/5gWtW3ekgZ) and [subreddit](https://www.reddit.com/r/kapowarr/) are available.
-- For donations, go to [Ko-Fi](https://ko-fi.com/casvt).
+Bubblarr is a fork of [Kapowarr](https://github.com/Casvt/Kapowarr) by Casvt. If you like the original project, consider [donating to Kapowarr](https://ko-fi.com/casvt). Please don't report problems with Bubblarr-specific features (like torrent indexers) to the Kapowarr project.

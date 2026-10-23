@@ -323,33 +323,35 @@ const default_values = {
 	'last_login': 0,
 	'monitor_new_volume': true,
 	'monitor_new_issues': true,
-	'monitoring_scheme': "all"
+	'monitoring_scheme': "all",
+	'calendar_view': 'month',
+	'calendar_monitored_only': false
 };
 
 function setupLocalStorage() {
-	if (!localStorage.getItem('kapowarr'))
-		localStorage.setItem('kapowarr', JSON.stringify(default_values));
+	if (!localStorage.getItem('bubblarr'))
+		localStorage.setItem('bubblarr', JSON.stringify(default_values));
 
 	const missing_keys = [
 		...Object.keys(default_values)
 	].filter(e =>
-		![...Object.keys(JSON.parse(localStorage.getItem('kapowarr')))].includes(e)
+		![...Object.keys(JSON.parse(localStorage.getItem('bubblarr')))].includes(e)
 	)
 
 	if (missing_keys.length) {
-		const storage = JSON.parse(localStorage.getItem('kapowarr'));
+		const storage = JSON.parse(localStorage.getItem('bubblarr'));
 
 		missing_keys.forEach(missing_key => {
 			storage[missing_key] = default_values[missing_key]
 		})
 
-		localStorage.setItem('kapowarr', JSON.stringify(storage));
+		localStorage.setItem('bubblarr', JSON.stringify(storage));
 	};
 	return;
 };
 
 function getLocalStorage(...keys) {
-	const storage = JSON.parse(localStorage.getItem('kapowarr'));
+	const storage = JSON.parse(localStorage.getItem('bubblarr'));
 	const result = {};
 	for (const key of keys)
 		result[key] = storage[key];
@@ -358,12 +360,12 @@ function getLocalStorage(...keys) {
 };
 
 function setLocalStorage(keys_values) {
-	const storage = JSON.parse(localStorage.getItem('kapowarr'));
+	const storage = JSON.parse(localStorage.getItem('bubblarr'));
 
 	for (const [key, value] of Object.entries(keys_values))
 		storage[key] = value;
 
-	localStorage.setItem('kapowarr', JSON.stringify(storage));
+	localStorage.setItem('bubblarr', JSON.stringify(storage));
 	return;
 };
 
@@ -387,6 +389,14 @@ function setupTheme() {
 		expires.setTime(expires.getTime() + 86400 * 1000)
 
 	document.cookie = `theme=${className}; expires=${expires.toUTCString()}; path=/;`
+
+	// Let the browser bar (and the status bar of the home screen app) match
+	// the header color of the theme
+	const themeColor = getComputedStyle(root)
+		.getPropertyValue('--header-background-color').trim();
+	const themeMeta = document.querySelector('meta[name="theme-color"]');
+	if (themeColor && themeMeta)
+		themeMeta.setAttribute('content', themeColor);
 	return
 }
 
@@ -409,3 +419,179 @@ setupTheme();
 
 document.querySelector('#toggle-nav').onclick = e =>
 	document.querySelector('#nav-bar').classList.toggle('show-nav');
+
+//
+// Global search (top left, like Sonarr/Radarr)
+//
+const GlobalSearch = {
+	form: document.querySelector('#global-search'),
+	input: document.querySelector('#global-search-input'),
+	results: document.querySelector('#global-search-results'),
+	timer: null,
+	request: 0,
+	selected: -1,
+	openFirst: false
+};
+
+function closeGlobalSearch() {
+	GlobalSearch.results.classList.add('hidden');
+	GlobalSearch.input.setAttribute('aria-expanded', 'false');
+	GlobalSearch.input.removeAttribute('aria-activedescendant');
+	GlobalSearch.selected = -1;
+};
+
+function selectGlobalSearchResult(index) {
+	const items = GlobalSearch.results.querySelectorAll('li[role="option"]');
+	if (!items.length)
+		return;
+	if (index < 0) index = items.length - 1;
+	if (index >= items.length) index = 0;
+
+	items.forEach((item, i) => item.setAttribute('aria-selected', i === index));
+	items[index].scrollIntoView({block: 'nearest'});
+	GlobalSearch.input.setAttribute('aria-activedescendant', items[index].id);
+	GlobalSearch.selected = index;
+};
+
+function addGlobalSearchOption(item, index) {
+	item.id = `global-search-result-${index}`;
+	item.setAttribute('role', 'option');
+	item.setAttribute('aria-selected', 'false');
+	item.onmousedown = e => e.preventDefault();
+	item.onclick = e => window.location.href = item.dataset.href;
+	item.onmousemove = e => {
+		if (GlobalSearch.selected !== index)
+			selectGlobalSearchResult(index);
+	};
+	GlobalSearch.results.appendChild(item);
+};
+
+function showGlobalSearchResults(volumes, api_key, query) {
+	GlobalSearch.results.innerHTML = '';
+
+	volumes = volumes.slice(0, 8);
+	volumes.forEach((volume, i) => {
+		const item = document.createElement('li');
+		item.id = `global-search-result-${i}`;
+		item.setAttribute('role', 'option');
+		item.setAttribute('aria-selected', 'false');
+		item.dataset.href = `${url_base}/volumes/${volume.id}`;
+
+		const cover = document.createElement('img');
+		cover.src = `${url_base}/api/volumes/${volume.id}/cover?api_key=${api_key}`;
+		cover.alt = '';
+		cover.loading = 'lazy';
+
+		const text = document.createElement('div');
+		const title = document.createElement('p');
+		title.classList.add('global-search-title');
+		title.innerText = volume.title;
+		const details = document.createElement('p');
+		details.classList.add('global-search-details');
+		details.innerText = [
+			volume.year,
+			volume.volume_number > 1 ? `Volume ${volume.volume_number}` : null,
+			volume.publisher
+		].filter(e => e).join(' · ');
+		text.append(title, details);
+
+		item.append(cover, text);
+		addGlobalSearchOption(item, i);
+	});
+
+	// Like Sonarr: search for new volumes to add with the same term
+	const add = document.createElement('li');
+	add.classList.add('global-search-add');
+	add.dataset.href = `${url_base}/add?q=${encodeURIComponent(query)}`;
+	const addIcon = document.createElement('span');
+	addIcon.classList.add('global-search-add-icon');
+	addIcon.innerText = '+';
+	const addText = document.createElement('div');
+	const addTitle = document.createElement('p');
+	addTitle.classList.add('global-search-title');
+	addTitle.innerText = `Search ComicVine for "${query}"`;
+	const addDetails = document.createElement('p');
+	addDetails.classList.add('global-search-details');
+	addDetails.innerText = volumes.length
+		? 'Add a new volume'
+		: 'Not in your library, add it as a new volume';
+	addText.append(addTitle, addDetails);
+	add.append(addIcon, addText);
+	addGlobalSearchOption(add, volumes.length);
+
+	GlobalSearch.selected = -1;
+	if (GlobalSearch.openFirst) {
+		// Enter was pressed before the results came in: open the best match
+		window.location.href = volumes.length
+			? `${url_base}/volumes/${volumes[0].id}`
+			: add.dataset.href;
+		return;
+	};
+	GlobalSearch.openFirst = false;
+	GlobalSearch.results.classList.remove('hidden');
+	GlobalSearch.input.setAttribute('aria-expanded', 'true');
+};
+
+function runGlobalSearch() {
+	const query = GlobalSearch.input.value.trim();
+	if (!query) {
+		closeGlobalSearch();
+		return;
+	};
+
+	const request = ++GlobalSearch.request;
+	usingApiKey()
+	.then(api_key => fetchAPI('/volumes', api_key, {
+		query: encodeURIComponent(query), sort: 'title'
+	})
+	.then(json => {
+		// Ignore responses of older searches
+		if (request === GlobalSearch.request
+		&& GlobalSearch.input.value.trim() === query)
+			showGlobalSearchResults(json.result, api_key, query);
+	}));
+};
+
+GlobalSearch.input.oninput = e => {
+	clearTimeout(GlobalSearch.timer);
+	GlobalSearch.timer = setTimeout(runGlobalSearch, 150);
+};
+
+GlobalSearch.input.onfocus = e => {
+	if (GlobalSearch.input.value.trim()
+	&& GlobalSearch.results.children.length)
+		GlobalSearch.results.classList.remove('hidden');
+};
+
+GlobalSearch.input.onblur = e => closeGlobalSearch();
+
+GlobalSearch.input.onkeydown = e => {
+	const open = !GlobalSearch.results.classList.contains('hidden');
+	if (e.key === 'ArrowDown' && open) {
+		e.preventDefault();
+		selectGlobalSearchResult(GlobalSearch.selected + 1);
+	} else if (e.key === 'ArrowUp' && open) {
+		e.preventDefault();
+		selectGlobalSearchResult(GlobalSearch.selected - 1);
+	} else if (e.key === 'Escape') {
+		if (open)
+			closeGlobalSearch();
+		else
+			GlobalSearch.input.blur();
+	};
+};
+
+GlobalSearch.form.onsubmit = e => {
+	e.preventDefault();
+	// Open the highlighted volume, or the first one
+	const items = GlobalSearch.results.querySelectorAll('li[role="option"]');
+	const item = items[Math.max(GlobalSearch.selected, 0)];
+	if (item)
+		window.location.href = item.dataset.href;
+	else {
+		// Pressed enter before the results came in
+		clearTimeout(GlobalSearch.timer);
+		GlobalSearch.openFirst = true;
+		runGlobalSearch();
+	};
+};

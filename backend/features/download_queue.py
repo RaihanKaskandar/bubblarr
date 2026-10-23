@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from os import listdir
 from os.path import basename, join
+from re import IGNORECASE, compile
 from time import sleep
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple, Union
 
@@ -24,6 +25,9 @@ from backend.base.definitions import (BlocklistReason, Constants, Download,
 from backend.base.files import create_folder, delete_file_folder
 from backend.base.helpers import CommaList, Singleton
 from backend.base.logging import LOGGER
+from backend.features.comicgeeks_sync import \
+    sync_volume_collection_in_background
+from backend.features.webhooks import download_failed, download_imported
 from backend.features.post_processing import (PostProcessor,
                                               PostProcessorTorrentsComplete,
                                               PostProcessorTorrentsCopy)
@@ -33,13 +37,31 @@ from backend.implementations.download_prepper_manager import DownloadPreppers
 from backend.implementations.external_client_manager import ExternalClients
 from backend.implementations.indexer_client_manager import IndexerClients
 from backend.implementations.volumes import Issue
-from backend.internals.db import get_db, iter_commit
+from backend.internals.db import commit, get_db, iter_commit
 from backend.internals.server import (AddedToQueueEvent, QueueStatusEvent,
                                       RemovedFromQueueEvent, Server, WebSocket)
 from backend.internals.settings import Settings
 
 if TYPE_CHECKING:
     from threading import Thread
+
+
+api_key_in_url = compile(r"((?:api_?key|jackett_apikey)=)[^&]+", IGNORECASE)
+magnet_hash = compile(r"urn:btih:([0-9a-z]+)", IGNORECASE)
+
+
+def get_torrent_hash(link: str) -> Union[str, None]:
+    """Get the infohash of a magnet link.
+
+    Args:
+        link (str): The link.
+
+    Returns:
+        Union[str, None]: The lowercase infohash, or None if it's not a magnet
+            link.
+    """
+    match = magnet_hash.search(link)
+    return match.group(1).lower() if match else None
 
 
 class DownloadHandler(metaclass=Singleton):
@@ -172,7 +194,8 @@ class DownloadHandler(metaclass=Singleton):
         LOGGER.info(
             'Adding download for ' +
             f'volume {volume_id}{f" issue {issue_id}" if issue_id else ""}: ' +
-            f'{link}'
+            # Links of Torznab indexers contain the API key
+            api_key_in_url.sub(r'\1<redacted>', link)
         )
 
         if self.link_in_queue(link):
@@ -219,11 +242,32 @@ class DownloadHandler(metaclass=Singleton):
 
             raise e
 
+        # The same torrent can come from different links (e.g. Prowlarr
+        # generates a new download link for each search)
+        queued_hashes = {
+            get_torrent_hash(d.download_link)
+            for d in self.queue
+        } - {None}
+        new_downloads = []
+        for download in downloads:
+            if get_torrent_hash(download.download_link) in queued_hashes:
+                LOGGER.info(
+                    'Torrent already in queue: %s', download.title
+                )
+                continue
+            new_downloads.append(download)
+        downloads = new_downloads
+
         result = self.__prepare_downloads_for_queue(
             downloads,
             forced_match=force_match
         )
         self.queue += result
+        for download in result:
+            LOGGER.info(
+                'Queued download: %s (%s)',
+                download.title, download.source_name
+            )
 
         self._process_queue()
         return [r.as_dict() for r in result]
@@ -368,7 +412,7 @@ class DownloadHandler(metaclass=Singleton):
             download (Download): The download to run.
                 One of the entries in self.queue.
         """
-        LOGGER.info(f'Starting download: {download.id}')
+        LOGGER.info(f'Starting download {download.id}: {download.title}')
 
         ws = WebSocket()
         status_event = QueueStatusEvent(download)
@@ -390,6 +434,7 @@ class DownloadHandler(metaclass=Singleton):
 
         elif download.state == DownloadState.FAILED_STATE:
             pp.failed()
+            download_failed(download)
 
         elif download.state == DownloadState.DOWNLOADING_STATE:
             download.state = DownloadState.IMPORTING_STATE
@@ -399,6 +444,9 @@ class DownloadHandler(metaclass=Singleton):
             self._process_queue()
 
             pp.success()
+            commit()
+            sync_volume_collection_in_background(download.volume_id)
+            download_imported(download)
 
         self.queue.remove(download)
         ws.emit(RemovedFromQueueEvent(download))
@@ -445,6 +493,7 @@ class DownloadHandler(metaclass=Singleton):
             elif download.state == DownloadState.FAILED_STATE:
                 download.remove_from_client(delete_files=True)
                 pp.perm_failed()
+                download_failed(download)
                 self.queue.remove(download)
                 break
 
@@ -458,11 +507,35 @@ class DownloadHandler(metaclass=Singleton):
             ):
                 files_copied = True
                 pp.seeding()
+                # The thread keeps running while seeding, so don't keep the
+                # database locked with uncommitted changes
+                commit()
+                sync_volume_collection_in_background(download.volume_id)
+                download_imported(download)
 
             elif download.state == DownloadState.IMPORTING_STATE:
+                if (
+                    seeding_handling == SeedingHandling.COPY
+                    and not files_copied
+                ):
+                    # The torrent finished without us seeing it seed (e.g.
+                    # the client stopped it right away). The files still have
+                    # to be copied, as success() for 'copy' only cleans up.
+                    files_copied = True
+                    pp.seeding()
+                    commit()
+                    imported_now = True
+                else:
+                    # With 'copy', the files were imported when seeding started
+                    imported_now = seeding_handling != SeedingHandling.COPY
+
                 if self.settings.sv.delete_completed_downloads:
                     download.remove_from_client(delete_files=False)
                 pp.success()
+                commit()
+                sync_volume_collection_in_background(download.volume_id)
+                if imported_now:
+                    download_imported(download)
                 self.queue.remove(download)
                 break
 

@@ -4,7 +4,7 @@
 			"name": "Main File",
 			"type": "debugpy",
 			"request": "launch",
-			"program": "${workspaceFolder}/Kapowarr.py",
+			"program": "${workspaceFolder}/Bubblarr.py",
 			"justMyCode": true
 		},
 		{
@@ -18,7 +18,7 @@
 				"--no-compress",
 				"-f",
 				"-o", "${workspaceFolder}/mem_prof.bin",
-				"${workspaceFolder}/Kapowarr.py"
+				"${workspaceFolder}/Bubblarr.py"
 			],
 			"postDebugTask": "Create Memory Profile Data"
 		},
@@ -26,7 +26,7 @@
 			"name": "Profile CPU",
 			"type": "debugpy",
 			"request": "launch",
-			"program": "${workspaceFolder}/Kapowarr.py",
+			"program": "${workspaceFolder}/Bubblarr.py",
 			"justMyCode": true,
 			"postDebugTask": "Show Profile Data"
 		},

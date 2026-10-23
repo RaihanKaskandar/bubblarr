@@ -188,7 +188,7 @@ Set the filesystem permissions of the volume folders, all sub-folders and all fi
 
 ### Chown Group
 
-Set the filesystem group owner of the volume folders, all sub-folders and all files in the volume folders. Give the group name or ID (e.g. 'media' or '1001'). The user that is running Kapowarr must be part of the group. Use the button below it to apply the setting to all existing files.
+Set the filesystem group owner of the volume folders, all sub-folders and all files in the volume folders. Give the group name or ID (e.g. 'media' or '1001'). The user that is running Bubblarr must be part of the group. Use the button below it to apply the setting to all existing files.
 
 ## Converting
 
@@ -196,30 +196,30 @@ The "converting" feature allows you to change the format of your files (e.g. fro
 
 ### Convert/Extract Downloaded Files
 
-This setting dictates whether Kapowarr should automatically convert downloaded files. As mentioned before, this also covers extracting archive files. Kapowarr will follow the [format preference](#format-preference) set.
+This setting dictates whether Bubblarr should automatically convert downloaded files. As mentioned before, this also covers extracting archive files. Bubblarr will follow the [format preference](#format-preference) set.
 
 ### Extract archives containing issues
 
-If an archive file has (most often multiple) complete issues inside, then extract the files inside and convert those issue files following the format preference. With the setting disabled, Kapowarr will convert the file as normal. Even when no format preference is set (= don't convert), this setting can still be enabled to extract archive files (up to beta-3, this was called 'unzipping').
+If an archive file has (most often multiple) complete issues inside, then extract the files inside and convert those issue files following the format preference. With the setting disabled, Bubblarr will convert the file as normal. Even when no format preference is set (= don't convert), this setting can still be enabled to extract archive files (up to beta-3, this was called 'unzipping').
 
-_Note: if Kapowarr determines that a file in the archive file is not related to the volume, it will not be extracted and will be deleted when the archive file is finished being unpacked. If you find faulty deletions occurring, please make an issue on GitHub._
+_Note: if Bubblarr determines that a file in the archive file is not related to the volume, it will not be extracted and will be deleted when the archive file is finished being unpacked. If you find faulty deletions occurring, please make an issue on GitHub._
 
 ### Format Preference
 
-The formats that Kapowarr should convert the files to. It will try to convert the files to the format at place 1, but if that is not possible, it will fall back to the format at place 2, and so forth. The last place will always be occupied by the format 'No Conversion'. That means that if Kapowarr is not able to convert the file to any of the set formats, it will just keep the current one. If no format preference is set ('No Conversion' is at place 1), no conversion will happen. 
+The formats that Bubblarr should convert the files to. It will try to convert the files to the format at place 1, but if that is not possible, it will fall back to the format at place 2, and so forth. The last place will always be occupied by the format 'No Conversion'. That means that if Bubblarr is not able to convert the file to any of the set formats, it will just keep the current one. If no format preference is set ('No Conversion' is at place 1), no conversion will happen. 
 
 ??? info "The format called 'folder'"
-	The format called 'folder' means extracting archive files containing images that directly cover a single issue. This is different from the ['Extract archives covering multiple issues' setting](#extract-archives-containing-issues). That setting will extract complete issue files from an archive file containing them. If you then add 'folder' to the format preference, it will extract any archive files coming out of the original archive file again. The format 'folder' will most likely lead to a folder with inside of it a series of image files. If you want to recreate the 'unzipping' feature from Kapowarr beta-3 and before, enable the before mentioned setting and do _not_ include 'folder' in the format preference. 
+	The format called 'folder' means extracting archive files containing images that directly cover a single issue. This is different from the ['Extract archives covering multiple issues' setting](#extract-archives-containing-issues). That setting will extract complete issue files from an archive file containing them. If you then add 'folder' to the format preference, it will extract any archive files coming out of the original archive file again. The format 'folder' will most likely lead to a folder with inside of it a series of image files. If you want to recreate the 'unzipping' feature from Bubblarr beta-3 and before, enable the before mentioned setting and do _not_ include 'folder' in the format preference. 
 
-	_Note: if Kapowarr determines that a file in the archive file is not related to the volume, it will not be extracted and will be deleted when the archive file is finished being unpacked. If you find faulty deletions occurring, please make an issue on GitHub._
+	_Note: if Bubblarr determines that a file in the archive file is not related to the volume, it will not be extracted and will be deleted when the archive file is finished being unpacked. If you find faulty deletions occurring, please make an issue on GitHub._
 
 ## Root Folders
 
-Root folders are the base folders that Kapowarr works in. All media files are put in these folders. Kapowarr needs at least one root folder set in order to work properly.
+Root folders are the base folders that Bubblarr works in. All media files are put in these folders. Bubblarr needs at least one root folder set in order to work properly.
 
 When adding a volume (or when editing one), you choose in which root folder all content for that volume is put. You might have multiple root folders because you store your comics on multiple drives or want different access rights to certain volumes, to name a few reasons.
 
-You can use the edit button on the right to rename a root folder. Or the delete button to remove a root folder from Kapowarr, but not actually deleting the folder on the filesystem. You can only remove a root folder when no volume in your library has their volume folder in the root folder.
+You can use the edit button on the right to rename a root folder. Or the delete button to remove a root folder from Bubblarr, but not actually deleting the folder on the filesystem. You can only remove a root folder when no volume in your library has their volume folder in the root folder.
 
 !!! warning "Adding root folders on Docker"
-	If you use Docker to run Kapowarr, then the root folder that you enter in the web-UI is the mapped folder, not the folder path on the host machine. That means that if you followed the [installation instructions](../installation/docker.md#launch-container), you would need to enter `/comics`, `/comics-2`, etc. as your root folder.
+	If you use Docker to run Bubblarr, then the root folder that you enter in the web-UI is the mapped folder, not the folder path on the host machine. That means that if you followed the [installation instructions](../installation/docker.md#launch-container), you would need to enter `/comics`, `/comics-2`, etc. as your root folder.

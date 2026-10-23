@@ -51,6 +51,7 @@
 
 .settings-container table select,
 .settings-container table input,
+.settings-container table textarea,
 #convert-table tr:nth-last-child(2) td p {
 	width: min(50rem, 100%);
 
@@ -147,7 +148,7 @@
 
 	padding: .8rem;
 	border-radius: 4px;
-	color: var(--nav-background-color);
+	color: var(--on-accent-color);
 	background-color: var(--accent-color);
 
 	font-weight: 700;
@@ -166,7 +167,7 @@
 #add-row button {
 	padding: .4rem .6rem;
 	border-radius: 4px;
-	color: var(--nav-background-color);
+	color: var(--on-accent-color);
 	background-color: var(--accent-color);
 }
 
@@ -478,4 +479,81 @@
 
 #pref-table th {
 	width: 2rem;
+}
+
+/* Indexers */
+.indexer-help {
+	margin-bottom: 1rem;
+}
+
+.indexer-help code {
+	padding: .1rem .3rem;
+	border-radius: 4px;
+	background-color: var(--foreground-color);
+}
+
+.client-list > button.disabled-indexer {
+	opacity: .5;
+}
+
+.client-list > button .indexer-badge {
+	position: absolute;
+	right: .5rem;
+	bottom: .5rem;
+	z-index: 1;
+
+	padding: .1rem .5rem;
+	border-radius: 4px;
+	background-color: var(--accent-color);
+	color: var(--on-accent-color);
+
+	font-size: .8rem;
+}
+
+/* League of Comic Geeks */
+.comicgeeks-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .5rem .75rem;
+	margin-top: .6rem;
+}
+
+.comicgeeks-actions button {
+	padding: .4rem .9rem;
+	border-radius: 4px;
+	background-color: var(--accent-color);
+	color: var(--on-accent-color);
+}
+
+#comicgeeks-status,
+#webhook-status {
+	font-size: .9rem;
+}
+
+/* Darker than the success/error colors, to be readable on white */
+#comicgeeks-status.success,
+#webhook-status.success {
+	color: #1d7f36;
+}
+
+#comicgeeks-status.error,
+#webhook-status.error {
+	color: #c53030;
+}
+
+:root.dark-mode #comicgeeks-status.success,
+:root.dark-mode #webhook-status.success {
+	color: var(--success-color);
+}
+
+:root.dark-mode #comicgeeks-status.error,
+:root.dark-mode #webhook-status.error {
+	color: var(--error-color);
+}
+
+#webhook-urls-input {
+	display: block;
+	resize: vertical;
+	line-height: 1.5;
 }

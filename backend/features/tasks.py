@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Type, TypeVar, Union
 
 from backend.base.custom_exceptions import (InvalidKeyValue,
                                             TaskNotDeletable, TaskNotFound)
-from backend.base.definitions import QueuedTaskData, Task
+from backend.base.definitions import KapowarrException, QueuedTaskData, Task
 from backend.base.helpers import Singleton, get_schedules_next_run
 from backend.base.logging import LOGGER
 from backend.features.download_queue import DownloadHandler
@@ -21,6 +21,7 @@ from backend.internals.db import get_db
 from backend.internals.db_backup_import import backup_database
 from backend.internals.server import (Server, TaskAddedEvent, TaskEndedEvent,
                                       TaskStatusEvent, WebSocket)
+from backend.internals.settings import Settings
 
 if TYPE_CHECKING:
     from threading import Timer
@@ -31,6 +32,7 @@ TASK_INTERVALS = {
     # Note: If there are tasks that should be run at the same time,
     #   but per se after each other, put them in that order in the dict.
     'update_all': '0 * * * *', # every hour at minute 0
+    'comicgeeks_sync': '30 3 * * *', # every day at 03:30
     'backup_db': '0 0 * * 1', # every Monday at 00:00
     'rss_sync': '0,30 * * * *' # every half hour
 }
@@ -829,6 +831,47 @@ class UpdateAll(LibraryTask):
         except InvalidKeyValue:
             # API key invalid
             pass
+
+        return
+
+
+@TaskHandler.register_task('comicgeeks_sync')
+class ComicGeeksSync(LibraryTask):
+    "Mark all downloaded issues as collected on League of Comic Geeks"
+
+    stop = False
+    message = ''
+    display_title = 'League of Comic Geeks Sync'
+
+    @property
+    def volume_id(self) -> None:
+        return None
+
+    @property
+    def issue_id(self) -> None:
+        return None
+
+    def __init__(self) -> None:
+        return
+
+    def run(self) -> None:
+        from backend.features.comicgeeks_sync import (is_configured,
+                                                      sync_all_collections)
+
+        settings = Settings().sv
+        if not (is_configured() and settings.comicgeeks_sync_collection):
+            return
+
+        def progress(current: int, total: int) -> None:
+            self.message = (
+                f'Syncing to League of Comic Geeks ({current}/{total})'
+            )
+            WebSocket().emit(TaskStatusEvent(self.message))
+
+        try:
+            sync_all_collections(progress)
+        except KapowarrException:
+            LOGGER.exception('League of Comic Geeks sync failed: ')
 
         return
 

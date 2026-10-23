@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING, Dict
 
 from backend.base.definitions import (BlocklistReason,
                                       DownloadState, FileConstants)
-from backend.base.files import (copy_directory, delete_file_folder,
-                                rename_file, set_detected_extension)
+from backend.base.files import (copy, copy_directory, create_folder,
+                                delete_file_folder, rename_file,
+                                set_detected_extension)
 from backend.base.logging import LOGGER
 from backend.implementations.blocklist import add_to_blocklist
 from backend.implementations.conversion import mass_convert
@@ -183,7 +184,12 @@ class PostProcessingContext:
             )
             delete_file_folder(file_dest)
 
-        copy_directory(self.download.files[0], file_dest)
+        if isfile(self.download.files[0]):
+            # Torrent with a single file
+            create_folder(folder)
+            copy(self.download.files[0], file_dest)
+        else:
+            copy_directory(self.download.files[0], file_dest)
 
         self.download.files = extract_files_from_folder(
             file_dest,
@@ -270,7 +276,7 @@ class PostProcessor:
 
     def success(self) -> None:
         LOGGER.info(
-            f'Postprocessing of successful download: {self.download.id}'
+            f'Postprocessing of successful download: {self.download.id} ({self.download.title})'
         )
         self.ctx.remove_from_queue()
         self.ctx.add_to_history()
@@ -285,18 +291,18 @@ class PostProcessor:
         return
 
     def canceled(self) -> None:
-        LOGGER.info(f'Postprocessing of canceled download: {self.download.id}')
+        LOGGER.info(f'Postprocessing of canceled download: {self.download.id} ({self.download.title})')
         self.ctx.delete_file()
         self.ctx.remove_from_queue()
         return
 
     def shutdown(self) -> None:
-        LOGGER.info(f'Postprocessing of shut down download: {self.download.id}')
+        LOGGER.info(f'Postprocessing of shut down download: {self.download.id} ({self.download.title})')
         self.ctx.delete_file()
         return
 
     def failed(self) -> None:
-        LOGGER.info(f'Postprocessing of failed download: {self.download.id}')
+        LOGGER.info(f'Postprocessing of failed download: {self.download.id} ({self.download.title})')
         self.ctx.remove_from_queue()
         self.ctx.add_to_history()
         self.ctx.delete_file()
@@ -304,7 +310,7 @@ class PostProcessor:
 
     def perm_failed(self) -> None:
         LOGGER.info(
-            f'Postprocessing of permanently failed download: {self.download.id}'
+            f'Postprocessing of permanently failed download: {self.download.id} ({self.download.title})'
         )
         self.ctx.remove_from_queue()
         self.ctx.add_to_history()
@@ -316,7 +322,7 @@ class PostProcessor:
 class PostProcessorTorrentsComplete(PostProcessor):
     def success(self) -> None:
         LOGGER.info(
-            f'Postprocessing of successful download: {self.download.id}'
+            f'Postprocessing of successful download: {self.download.id} ({self.download.title})'
         )
         self.ctx.remove_from_queue()
         self.ctx.add_to_history()
@@ -329,14 +335,14 @@ class PostProcessorTorrentsComplete(PostProcessor):
 class PostProcessorTorrentsCopy(PostProcessor):
     def success(self) -> None:
         LOGGER.info(
-            f'Postprocessing of successful download: {self.download.id}'
+            f'Postprocessing of successful download: {self.download.id} ({self.download.title})'
         )
         self.ctx.remove_from_queue()
         self.ctx.delete_file()
         return
 
     def seeding(self) -> None:
-        LOGGER.info(f'Postprocessing of seeding download: {self.download.id}')
+        LOGGER.info(f'Postprocessing of seeding download: {self.download.id} ({self.download.title})')
         self.ctx.add_to_history()
         self.ctx.copy_file_torrent()
         self.ctx.convert_file()

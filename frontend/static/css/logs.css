@@ -1,0 +1,206 @@
+/*  */
+/* Tool bar */
+/*  */
+#download-button {
+	display: flex;
+	align-items: center;
+	text-decoration: none;
+}
+
+#pause-button svg {
+	height: 1.15rem;
+	width: 1.15rem;
+	flex: 0 0 auto;
+}
+
+.tool-bar > #log-filters {
+	width: auto;
+	flex-direction: row;
+	gap: .5rem;
+	padding-inline: .75rem;
+}
+
+#log-filters select,
+#log-filters input {
+	height: 2rem;
+	padding: 0 .6rem;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	outline: 0;
+	background-color: var(--background-color);
+	color: var(--text-color);
+	font-family: inherit;
+	font-size: .85rem;
+}
+
+#log-filters input {
+	width: clamp(9rem, 22vw, 16rem);
+}
+
+#log-filters :is(select, input):focus {
+	border-color: var(--accent-color);
+}
+
+/*  */
+/* Log table */
+/*  */
+.main-window {
+	padding: 1rem clamp(.5rem, 2vw, 1.5rem);
+	color: var(--text-color);
+}
+
+#log-summary {
+	margin-bottom: .5rem;
+	color: var(--dimmed-text-color);
+	font-size: .85rem;
+}
+
+.log-table-container {
+	overflow-x: auto;
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	background-color: var(--foreground-color);
+}
+
+#log-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: .85rem;
+}
+
+#log-table th {
+	padding: .6rem .5rem;
+	border-bottom: 1px solid var(--border-color);
+	font-weight: 500;
+}
+
+#log-table td {
+	padding: .35rem .5rem;
+	border-bottom: 1px solid var(--border-color);
+	vertical-align: top;
+}
+
+#log-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+#log-table tbody tr:hover {
+	background-color: var(--hover-color);
+}
+
+.log-level-column {
+	width: 2rem;
+	text-align: center;
+}
+
+.log-time-column {
+	width: 9.5rem;
+	white-space: nowrap;
+	color: var(--dimmed-text-color);
+}
+
+.log-source-column {
+	width: 12rem;
+	white-space: nowrap;
+	color: var(--dimmed-text-color);
+	font-size: .75rem;
+}
+
+.log-message {
+	word-break: break-word;
+	font-family: "Ubuntu Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+.log-message details {
+	margin-top: .25rem;
+}
+
+.log-message summary {
+	cursor: pointer;
+	color: var(--dimmed-text-color);
+	font-family: Roboto, sans-serif;
+	font-size: .75rem;
+}
+
+.log-message pre {
+	margin-top: .25rem;
+	white-space: pre-wrap;
+	font-family: inherit;
+}
+
+.log-badge {
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	width: 1.3rem;
+	height: 1.3rem;
+	border-radius: 3px;
+	background-color: var(--border-color);
+	color: var(--text-color);
+	font-size: .7rem;
+	font-weight: 700;
+}
+
+.log-info .log-badge {
+	background-color: #5d9cec;
+	color: #ffffff;
+}
+
+.log-warning .log-badge {
+	background-color: #ffa500;
+	color: #ffffff;
+}
+
+.log-error .log-badge,
+.log-critical .log-badge {
+	background-color: var(--error-color);
+	color: #ffffff;
+}
+
+.log-error td,
+.log-critical td {
+	background-color: color-mix(in srgb, var(--error-color) 8%, transparent);
+}
+
+.log-warning td {
+	background-color: color-mix(in srgb, #ffa500 7%, transparent);
+}
+
+.log-debug .log-message {
+	color: var(--dimmed-text-color);
+}
+
+#log-empty {
+	padding: 2rem;
+	text-align: center;
+	color: var(--dimmed-text-color);
+}
+
+@media (max-width: 720px) {
+	.log-source-column {
+		display: none;
+	}
+
+	.log-time-column {
+		width: auto;
+		font-size: .75rem;
+		white-space: normal;
+	}
+
+	.tool-bar > #log-filters {
+		padding-inline: .25rem;
+		gap: .35rem;
+	}
+
+	#log-filters select {
+		width: 6.5rem;
+	}
+
+	#log-filters input {
+		width: 7.5rem;
+	}
+
+	#download-button {
+		display: none;
+	}
+}

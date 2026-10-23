@@ -1,4 +1,4 @@
-This page covers how Kapowarr matches certain things.
+This page covers how Bubblarr matches certain things.
 
 !!! tip "Matching using year"
 	If it is an option to match using the year, both the release year of the volume and the release year of the issue is allowed. The year is also allowed to be off by one from the reference year.
@@ -8,7 +8,7 @@ This page covers how Kapowarr matches certain things.
 
 ## Files to Issues
 
-This covers how Kapowarr matches files to issues of a volume. Information is extracted from the filename, folder and parent folder.
+This covers how Bubblarr matches files to issues of a volume. Information is extracted from the filename, folder and parent folder.
 
 ### Normal Volume
 
@@ -94,7 +94,7 @@ When extracting files from archives, the files are filtered and deleted if they 
 
 ## Search Results for Downloads
 
-When searching for downloads, Kapowarr determines whether the result is a match for the volume or not. The download has to conform with the following rules to be considered a match:
+When searching for downloads, Bubblarr determines whether the result is a match for the volume or not. The download has to conform with the following rules to be considered a match:
 
 1. Not be blocklisted.
 2. Series title has to match.
@@ -106,7 +106,7 @@ When searching for downloads, Kapowarr determines whether the result is a match 
 
 ## GetComics Groups
 
-When selecting links from a GetComics download page, Kapowarr filters the groups so that no irrelevant files are downloaded. See the [implementation details](./implementation_details.md#downloading-from-getcomics) for more information. The download group has to conform with the following rules to pass the filter:
+When selecting links from a GetComics download page, Bubblarr filters the groups so that no irrelevant files are downloaded. See the [implementation details](./implementation_details.md#downloading-from-getcomics) for more information. The download group has to conform with the following rules to pass the filter:
 
 1. Series title has to match.
 2. If the volume number is given, it should match.

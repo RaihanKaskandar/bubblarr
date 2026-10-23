@@ -16,11 +16,6 @@ const library_els = {
 	task_buttons: {
 		update_all: document.querySelector('#updateall-button')
 	},
-	search: {
-		clear: document.querySelector('#clear-search'),
-		container: document.querySelector('#search-container'),
-		input: document.querySelector('#search-input')
-	},
 	stats: {
 		volume_count: document.querySelector('#volume-count'),
 		volume_monitored_count: document.querySelector('#volume-monitored-count'),
@@ -206,10 +201,6 @@ function fetchLibrary(api_key) {
 		sort: library_els.view_options.sort.value,
 		filter: library_els.view_options.filter.value
 	};
-	const query = library_els.search.input.value;
-	if (query !== '')
-		params.query = query;
-
 	fetchAPI('/volumes', api_key, params)
 	.then(json => {
 		if (json.result.length === 0) {
@@ -219,15 +210,6 @@ function fetchLibrary(api_key) {
 			showLibraryPage(library_els.pages.view);
 		};
 	});
-};
-
-function searchLibrary() {
-	usingApiKey().then(api_key => fetchLibrary(api_key));
-};
-
-function clearSearch(api_key) {
-	library_els.search.input.value = '';
-	fetchLibrary(api_key);
 };
 
 function fetchStats(api_key) {
@@ -278,9 +260,6 @@ usingApiKey()
 .then(api_key => {
 	fetchLibrary(api_key);
 	fetchStats(api_key);
-
-	library_els.search.clear.onclick =
-		e => clearSearch(api_key);
 
 	library_els.task_buttons.update_all.onclick =
 		e => sendAPI('POST', '/system/tasks', api_key, {}, {
@@ -374,7 +353,6 @@ usingApiKey()
 		data => library_els.mass_edit.progress.innerText = `${data.current_item}/${data.total_items}`
 	);
 });
-library_els.search.container.action = 'javascript:searchLibrary();';
 library_els.mass_edit.select_all.onchange =
 	e => library_els.views.table.querySelectorAll('input[type="checkbox"]')
 			.forEach(c => c.checked = library_els.mass_edit.select_all.checked);

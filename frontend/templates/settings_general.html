@@ -18,7 +18,7 @@
 	<div class="settings-container">
 		<form id="settings-form">
 			<h2>Host</h2>
-			<p>Changing hosting settings will immediately restart Kapowarr. Access the web-ui within 60 seconds for the changes to stay, or they will be reverted.</p>
+			<p>Changing hosting settings will immediately restart Bubblarr. Access the web-ui within 60 seconds for the changes to stay, or they will be reverted.</p>
 			<table class="fold-table">
 				<tr>
 					<th><label for="bind-address-input">Bind Address</label></th>
@@ -79,7 +79,7 @@
 				</tr>
 			</table>
 			<h2>Proxy</h2>
-			<p>Changing proxy settings will immediately restart Kapowarr.</p>
+			<p>Changing proxy settings will immediately restart Bubblarr.</p>
 			<table class="fold-table">
 				<tr>
 					<th><label for="proxy-type-input">Proxy Type</label></th>
@@ -135,7 +135,7 @@
 					<th><label for="cv-input">Comic Vine API Key</label></th>
 					<td>
 						<input type="text" id="cv-input" required spellcheck="false">
-						<p>The API key of the <a href="https://comicvine.gamespot.com/api" target="_blank">Comic Vine API</a>, which is required for Kapowarr to work.</p>
+						<p>The API key of the <a href="https://comicvine.gamespot.com/api" target="_blank">Comic Vine API</a>, which is required for Bubblarr to work.</p>
 					</td>
 				</tr>
 				<tr>
@@ -190,6 +190,30 @@
 					<td>
 						<input type="number" id="db-backup-count-input" required min="0">
 						<p>The amount of backups to keep. If a new backup will exceed this amount, the oldest backup is deleted.</p>
+					</td>
+				</tr>
+			</table>
+			<h2>Webhooks</h2>
+			<p class="description">
+				Send events, like a volume being added or issues being downloaded, to other apps (e.g. a request app), so they don't have to keep asking Bubblarr for changes.
+			</p>
+			<table class="fold-table">
+				<tr>
+					<th><label for="webhook-urls-input">URLs</label></th>
+					<td>
+						<textarea id="webhook-urls-input" rows="3" spellcheck="false" placeholder="https://requests.example.com/api/webhook"></textarea>
+						<p>One URL per line. Each event is sent as a JSON POST request.</p>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="webhook-secret-input">Secret</label></th>
+					<td>
+						<input type="password" id="webhook-secret-input" autocomplete="new-password">
+						<p>Optional. When set, requests are signed with it in the <code>X-Bubblarr-Signature</code> header, so the receiving app can check they come from Bubblarr.</p>
+						<div class="comicgeeks-actions">
+							<button type="button" id="webhook-test-button">Test</button>
+							<span id="webhook-status" aria-live="polite"></span>
+						</div>
 					</td>
 				</tr>
 			</table>

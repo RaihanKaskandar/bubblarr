@@ -101,8 +101,8 @@ class DatabaseMigrationHandler:
     @classmethod
     def migrate(cls) -> None:
         """
-        Migrate a Kapowarr database from its current version to the newest
-        version supported by the Kapowarr version installed.
+        Migrate a Bubblarr database from its current version to the newest
+        version supported by the Bubblarr version installed.
         """
         from backend.internals.settings import Settings
 
@@ -112,7 +112,7 @@ class DatabaseMigrationHandler:
 
         if current_db_version > newest_version:
             LOGGER.warning(
-                "Database is for newer version of Kapowarr"
+                "Database is for newer version of Bubblarr"
             )
             return
 
@@ -1310,5 +1310,21 @@ def _migrate_remove_search_all_task() -> None:
     get_db().execute(
         "DELETE FROM task_intervals WHERE task_name='search_all';"
     )
+
+    return
+
+
+@DatabaseMigrationHandler.register_handler(51)
+def _migrate_torznab_indexer_fields() -> None:
+    cursor = get_db()
+
+    for column in (
+        "api_key TEXT",
+        "categories TEXT",
+        "min_seeders INTEGER",
+        "priority INTEGER NOT NULL DEFAULT 25",
+        "prowlarr_synced BOOL NOT NULL DEFAULT 0"
+    ):
+        cursor.execute(f"ALTER TABLE indexer_clients ADD {column};")
 
     return

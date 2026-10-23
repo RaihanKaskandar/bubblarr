@@ -6,6 +6,7 @@ Setting up the database, handling connections, using it and closing it.
 
 from __future__ import annotations
 
+from os import rename
 from os.path import dirname, exists, isdir, join
 from sqlite3 import (PARSE_DECLTYPES, Connection, Cursor, ProgrammingError,
                      Row, register_adapter, register_converter)
@@ -230,7 +231,7 @@ def set_db_location(
 
     Args:
         db_folder (Union[str, None], optional): The folder in which the database
-            will be stored or in which a database is for Kapowarr to use. Give
+            will be stored or in which a database is for Bubblarr to use. Give
             `None` for the default location.
 
     Raises:
@@ -250,6 +251,19 @@ def set_db_location(
     LOGGER.debug(f'Setting database location: {db_file_location}')
 
     create_folder(dirname(db_file_location))
+
+    # Use the database of Kapowarr, if this is the first start after the rename
+    legacy_location = join(
+        dirname(db_file_location),
+        Constants.LEGACY_DB_NAME
+    )
+    if not exists(db_file_location) and exists(legacy_location):
+        LOGGER.info(
+            f'Renaming database from {legacy_location} to {db_file_location}'
+        )
+        for suffix in ('', '-wal', '-shm'):
+            if exists(legacy_location + suffix):
+                rename(legacy_location + suffix, db_file_location + suffix)
 
     DBConnection.default_file = db_file_location
     SettingsValues.db_backup_folder = dirname(db_file_location)
@@ -462,6 +476,22 @@ CREATE TABLE IF NOT EXISTS volume_files(
     FOREIGN KEY (file_id) REFERENCES files(id)
         ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS comicgeeks_volumes(
+    volume_id INTEGER PRIMARY KEY,
+    series_id INTEGER,
+    matched_at INTEGER NOT NULL,
+
+    FOREIGN KEY (volume_id) REFERENCES volumes(id)
+        ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS comicgeeks_issues(
+    issue_id INTEGER PRIMARY KEY,
+    comic_id INTEGER NOT NULL,
+    collected BOOL NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (issue_id) REFERENCES issues(id)
+        ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS indexer_clients(
     id INTEGER PRIMARY KEY,
     enabled BOOL NOT NULL DEFAULT 1,
@@ -471,7 +501,13 @@ CREATE TABLE IF NOT EXISTS indexer_clients(
     url TEXT NOT NULL,
 
     gc_service_preference TEXT,
-    gc_avoid_large_downloads BOOL
+    gc_avoid_large_downloads BOOL,
+
+    api_key TEXT,
+    categories TEXT,
+    min_seeders INTEGER,
+    priority INTEGER NOT NULL DEFAULT 25,
+    prowlarr_synced BOOL NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS external_download_clients(
     id INTEGER PRIMARY KEY,

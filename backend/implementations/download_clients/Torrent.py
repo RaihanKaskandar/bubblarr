@@ -3,6 +3,7 @@
 from os.path import basename, join, splitext
 from threading import Event
 from typing import Any, Dict, List, Tuple, Union
+from urllib.parse import parse_qs, urlparse
 
 from requests import RequestException
 
@@ -20,6 +21,51 @@ from backend.implementations.naming import generate_issue_name
 from backend.implementations.remote_mapping import RemoteMappings
 from backend.implementations.volumes import Volume
 from backend.internals.settings import Settings
+
+
+def fetch_torrent_name(magnet: str) -> str:
+    """Get the name of a torrent from its magnet link, by fetching the torrent
+    metadata.
+
+    Args:
+        magnet (str): The magnet link.
+
+    Raises:
+        DownloadLinkBroken: Failed to get the metadata.
+
+    Returns:
+        str: The name of the torrent.
+    """
+    try:
+        response = Session().post(
+            'https://magnet2torrent.com/upload/',
+            data={'magnet': magnet}
+        )
+        response.raise_for_status()
+        if response.headers.get(
+            'Content-Type'
+        ) != 'application/x-bittorrent':
+            raise RequestException
+
+        return get_torrent_info(response.content)[b'name'].decode()
+
+    except (RequestException, KeyError, TypeError, ValueError):
+        raise DownloadLinkBroken(magnet)
+
+
+def get_magnet_name(magnet: str) -> Union[str, None]:
+    """Get the display name (`dn`) of a magnet link.
+
+    Args:
+        magnet (str): The magnet link.
+
+    Returns:
+        Union[str, None]: The name, if the magnet link has one.
+    """
+    names = parse_qs(urlparse(magnet).query).get("dn")
+    if names and names[0].strip():
+        return names[0].strip()
+    return None
 
 
 @DownloadClients.register_client(DownloadClientIdentifier.TORRENT)
@@ -56,7 +102,8 @@ class TorrentDownload(ExternalDownload, BaseDirectDownload):
         web_sub_title: Union[str, None],
 
         forced_match: bool = False,
-        external_client: Union[ExternalDownloadClient, None] = None
+        external_client: Union[ExternalDownloadClient, None] = None,
+        torrent_name: Union[str, None] = None
     ) -> None:
         LOGGER.debug(
             'Creating download: %s',
@@ -102,22 +149,13 @@ class TorrentDownload(ExternalDownload, BaseDirectDownload):
                 raise e
 
         # Find name of torrent as that becomes folder that media is
-        # downloaded in
-        try:
-            response = Session().post(
-                'https://magnet2torrent.com/upload/',
-                data={'magnet': download_link}
-            )
-            response.raise_for_status()
-            if response.headers.get(
-                'Content-Type'
-            ) != 'application/x-bittorrent':
-                raise RequestException
+        # downloaded in. Releases from Torznab indexers have the real name of
+        # the torrent in the magnet link (see the Torznab download prepper).
+        if not torrent_name and download_service == DownloadService.TORZNAB:
+            torrent_name = get_magnet_name(download_link)
 
-        except RequestException:
-            raise DownloadLinkBroken(self.download_link)
-
-        torrent_name = get_torrent_info(response.content)[b'name'].decode()
+        if not torrent_name:
+            torrent_name = fetch_torrent_name(download_link)
 
         self._filename_body = ''
         if settings.rename_downloaded_files:
@@ -162,6 +200,17 @@ class TorrentDownload(ExternalDownload, BaseDirectDownload):
         self._progress = torrent_status['progress']
         self._speed = torrent_status['speed']
         self._size = torrent_status['size']
+
+        # The torrent client knows the real name of the torrent once it has
+        # the metadata, which can differ from the name in the magnet link.
+        name = torrent_status.get('name')
+        if name and self._files != [join(self._download_folder, name)]:
+            LOGGER.debug(
+                'Torrent client reports name of download %s: %s',
+                self._id, name
+            )
+            self._files = [join(self._download_folder, name)]
+
         if self.state not in (
             DownloadState.CANCELED_STATE,
             DownloadState.SHUTDOWN_STATE

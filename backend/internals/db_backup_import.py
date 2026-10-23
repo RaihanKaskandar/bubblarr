@@ -21,7 +21,8 @@ from backend.internals.settings import Settings
 
 # region Backup
 DB_FILE_REGEX = compile(
-    r'Kapowarr_(?P<year>\d{4})_(?P<month>\d{2})_(?P<day>\d{2})_(?P<hour>\d{2})_(?P<minute>\d{2}).db'
+    # Backups made before the rename from Kapowarr are also recognised
+    r'(?:Bubblarr|Kapowarr)_(?P<year>\d{4})_(?P<month>\d{2})_(?P<day>\d{2})_(?P<hour>\d{2})_(?P<minute>\d{2}).db'
 )
 
 
@@ -88,7 +89,7 @@ def create_database_copy(folder: str) -> str:
         str: The complete filepath of the created file.
     """
     current_date = datetime.now().strftime(r"%Y_%m_%d_%H_%M")
-    filename = join(folder, f'Kapowarr_{current_date}.db')
+    filename = join(folder, f'Bubblarr_{current_date}.db')
     DBConnection().create_backup(filename)
     return filename
 
@@ -269,7 +270,7 @@ def import_db_backup(
     backup = get_backup(index)
     dest = copy(
         backup["filepath"],
-        folder_path("db", "Kapowarr_upload.db")
+        folder_path("db", "Bubblarr_upload.db")
     )
 
     import_db(dest, copy_hosting_settings)

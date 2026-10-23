@@ -4,7 +4,7 @@
 
 This is the folder that files temporarily get downloaded to before being moved to the final location.
 
-If you run Kapowarr using Docker, leave this set to the default value of `/app/temp_downloads` and instead change the value of `/path/to/download_folder` in the [Docker command](../installation/docker.md#launch-container). If you have a manual install, you can change this value to whatever you want. It is required to be outside your root folders.
+If you run Bubblarr using Docker, leave this set to the default value of `/app/temp_downloads` and instead change the value of `/path/to/download_folder` in the [Docker command](../installation/docker.md#launch-container). If you have a manual install, you can change this value to whatever you want. It is required to be outside your root folders.
 
 ### Empty Download Folder
 
@@ -18,11 +18,11 @@ The amount of direct downloads (DDLs) that are allowed to run at the same time.
 
 ### Failing Download Timeout
 
-If a download is stalled (no seeders, no servers, no metadata found, etc.) for a long time, you can be pretty confident that it's not going to work. Kapowarr can automatically delete a download when it's stalled for a set amount of minutes. So for example, if you set it to 60, then Kapowarr will delete downloads that have been stalled for more than 60 minutes. Make the field empty (or set it to 0) to disable this feature.
+If a download is stalled (no seeders, no servers, no metadata found, etc.) for a long time, you can be pretty confident that it's not going to work. Bubblarr can automatically delete a download when it's stalled for a set amount of minutes. So for example, if you set it to 60, then Bubblarr will delete downloads that have been stalled for more than 60 minutes. The default is 60 minutes. Make the field empty (or set it to 0) to disable this feature. Downloads that are deleted this way are added to the blocklist, so that the same release is not downloaded again.
 
 ### Seeding Handling
 
-When a torrent has completed downloading, it will start to seed depending on the settings of the torrent client. The originally downloaded files need to be available in order to seed. But you might not want to wait for the torrent to complete seeding before you can read the downloaded media. Kapowarr offers two solutions:
+When a torrent has completed downloading, it will start to seed depending on the settings of the torrent client. The originally downloaded files need to be available in order to seed. But you might not want to wait for the torrent to complete seeding before you can read the downloaded media. Bubblarr offers two solutions:
 
 1. **Complete**  
 Wait until the torrent has completed seeding and then move the files. You'll have to wait until the torrent has completed seeding before the comics are available.

@@ -26,7 +26,46 @@
 							<option value="cover_date">Cover Date</option>
 							<option value="store_date">In Store Date</option>
 						</select>
-						<p>Dates will be updated on next metadata fetch.</p>
+						<p>The in store date is the day an issue is released, the cover date is usually two months later. Changing this updates the dates of all issues.</p>
+					</td>
+				</tr>
+			</table>
+
+			<h2>League of Comic Geeks</h2>
+			<p class="description">
+				Connect your <a href="https://leagueofcomicgeeks.com" target="_blank">League of Comic Geeks</a> account to mark downloaded issues as collected and to show your pull list in the calendar.
+				League of Comic Geeks has no official API, so this uses their website the same way a browser does. It can stop working when they change their website.
+			</p>
+			<table class="fold-table">
+				<tr>
+					<th><label for="comicgeeks-username-input">Username</label></th>
+					<td>
+						<input type="text" id="comicgeeks-username-input" autocomplete="off">
+					</td>
+				</tr>
+				<tr>
+					<th><label for="comicgeeks-password-input">Password</label></th>
+					<td>
+						<input type="password" id="comicgeeks-password-input" autocomplete="new-password">
+						<div class="comicgeeks-actions">
+							<button type="button" id="comicgeeks-test-button">Test</button>
+							<button type="button" id="comicgeeks-sync-button">Sync collection now</button>
+							<span id="comicgeeks-status" aria-live="polite"></span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="comicgeeks-collection-input">Mark Downloaded Issues as Collected</label></th>
+					<td>
+						<input type="checkbox" id="comicgeeks-collection-input">
+						<p>When an issue is downloaded, add it to your collection on League of Comic Geeks. Issues that were already downloaded are added by the daily sync, or with "Sync collection now".</p>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="comicgeeks-pull-list-input">Show Pull List in Calendar</label></th>
+					<td>
+						<input type="checkbox" id="comicgeeks-pull-list-input">
+						<p>Mark the issues on your pull list in the calendar, and show pulled issues of series that are not in your library.</p>
 					</td>
 				</tr>
 			</table>

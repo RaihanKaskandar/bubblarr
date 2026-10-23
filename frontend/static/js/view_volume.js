@@ -328,8 +328,12 @@ function showManualSearch(api_key, issue_id=null) {
 	const message = document.querySelector('#searching-message');
 	const table = document.querySelector('#search-result-table');
 	const tbody = table.querySelector('tbody');
+	const summary = document.querySelector('#search-summary');
+	const showRejected = document.querySelector('#show-rejected-input');
 
-	hide([table], [message]);
+	hide([table, summary], [message]);
+	showRejected.checked = false;
+	table.classList.remove('show-rejected');
 
 	// Show window
 	showWindow('manual-search-window');
@@ -364,9 +368,20 @@ function showManualSearch(api_key, issue_id=null) {
 			title.href = result.link;
 			title.innerText = result.display_title;
 
+			const reason = entry.querySelector('.rejection-reason');
+			if (result.match)
+				reason.remove();
+			else {
+				entry.classList.add('rejected-result');
+				reason.innerText = result.match_issue || '';
+			};
+
 			entry.querySelector('.source-column').innerText = result.indexer_title;
 			
 			entry.querySelector('.size-column').innerText = convertSize(result.size, 1);
+
+			entry.querySelector('.seeders-column').innerText =
+				result.seeders ?? '';
 
 			const download_button = entry.querySelector('.search-action-column :nth-child(1)');
 			download_button.classList.add('icon-text-color');
@@ -394,7 +409,33 @@ function showManualSearch(api_key, issue_id=null) {
 				blocklist_button.remove()
 		});
 
-		hide([message], [table]);
+		const matchCount = json.result.filter(r => r.match).length;
+		const rejectedCount = json.result.length - matchCount;
+		document.querySelector('#search-summary-text').innerText =
+			matchCount
+				? `${matchCount} matching release${matchCount === 1 ? '' : 's'} found.`
+				: (json.result.length
+					? 'No matching releases found.'
+					: 'No releases found.');
+		document.querySelector('#show-rejected-text').innerText =
+			`Show rejected releases (${rejectedCount})`;
+
+		if (rejectedCount)
+			hide([], [document.querySelector('#show-rejected-label')]);
+		else
+			hide([document.querySelector('#show-rejected-label')]);
+
+		// Without matches, only show the table when rejected releases are shown
+		const updateTable = () => {
+			table.classList.toggle('show-rejected', showRejected.checked);
+			if (matchCount || showRejected.checked)
+				hide([], [table]);
+			else
+				hide([table]);
+		};
+		showRejected.onchange = updateTable;
+		hide([message], [summary]);
+		updateTable();
 	});
 };
 

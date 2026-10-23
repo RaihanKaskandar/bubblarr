@@ -1,70 +1,165 @@
+/* Login page in the style of Sonarr/Radarr: a centered panel with the logo on top */
+
+html, body {
+	min-height: 100%;
+}
+
 body {
-	height: 100vh;
+	height: auto;
+	overflow: auto;
+	min-height: 100vh;
+	min-height: 100dvh;
+	flex-direction: row;
 
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	gap: 8rem;
+
+	/* Keep clear of the notch and home bar when added to the home screen */
+	padding:
+		max(1rem, env(safe-area-inset-top))
+		max(1rem, env(safe-area-inset-right))
+		max(1rem, env(safe-area-inset-bottom))
+		max(1rem, env(safe-area-inset-left));
 
 	background-color: var(--background-color);
-}
-
-#text-container {
-	text-align: center;
-}
-
-#text-container h1 {
-	margin-bottom: .5rem;
-
-	color: var(--accent-color);
-
-	font-size: min(20vw, 8rem);
-}
-
-#text-container p {
 	color: var(--text-color);
+
+	font-family: Roboto, "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+#login-page {
+	width: 100%;
+	max-width: 375px;
+}
+
+#login-panel {
+	overflow: hidden;
+	border-radius: 4px;
+	background-color: var(--foreground-color);
+	box-shadow: 0 0 15px 0 rgba(0, 0, 0, .15);
+}
+
+#login-header {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: .75rem;
+
+	padding: 1.25rem 1rem;
+	/* Neutral like Sonarr, so that the purple logo stands out */
+	background-color: var(--nav-background-color);
+	color: var(--nav-color);
+}
+
+#login-header img {
+	width: 56px;
+	height: 56px;
+}
+
+#login-header h1 {
+	font-size: 1.75rem;
+	font-weight: 400;
+	letter-spacing: .02em;
+}
+
+noscript {
+	position: static;
+	display: block;
+	margin: 1.25rem 1.25rem 0;
+	padding: .75rem;
+	border-radius: 4px;
+	font-size: .9rem;
 }
 
 #login-form {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
 	gap: 1rem;
+
+	padding: 1.5rem 1.25rem;
 }
 
-input {
-	margin-bottom: .3rem;
+#login-form label {
+	display: block;
+}
 
-	padding: .6rem;
-	outline: 0;
-	border: 1px solid transparent;
+/* Visually hidden, the placeholder shows the label like in Sonarr */
+#login-form label span {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+#login-form input {
+	width: 100%;
+	height: 44px;
+	padding: 0 .75rem;
+
+	border: 1px solid var(--border-color);
 	border-radius: 4px;
+	outline: 0;
+	background-color: var(--light-color);
 	color: var(--dark-color);
 
-	font-size: 1.3rem;
+	/* At least 16px, otherwise iOS zooms in on focus */
+	font-family: inherit;
+	font-size: 16px;
 
-	transition: border .3s ease-in;
+	transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
 }
 
-input:focus {
-	border: 1px solid var(--accent-color);
+:root.dark-mode #login-form input {
+	background-color: var(--dark-color);
+	color: var(--light-color);
 }
 
-input::placeholder {
-	font-size: .6rem;
-	text-align: right;
-	transition: color .3s ease-out;
+#login-form input::placeholder {
+	color: var(--dimmed-text-color);
 }
 
-input:focus::placeholder {
-	color: transparent;
+#login-form input:focus {
+	border-color: var(--accent-color);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 25%, transparent);
 }
 
-#login-form button {
-	padding: .5rem 1.6rem;
-	border-radius: 3px;
-	color: var(--dark-color);
+#login-form input.invalid {
+	border-color: var(--error-color);
+}
+
+#error-message {
+	padding: .65rem .75rem;
+	border-radius: 4px;
+	background-color: color-mix(in srgb, var(--error-color) 15%, transparent);
+	color: var(--error-color);
+
+	font-size: .9rem;
+	text-align: center;
+}
+
+#login-button {
+	height: 44px;
+	margin-top: .25rem;
+
+	border-radius: 4px;
 	background-color: var(--accent-color);
+	color: var(--on-accent-color);
 
-	font-size: 1.1rem;
+	font-family: inherit;
+	font-size: 1rem;
+	font-weight: 500;
+
+	transition: filter .15s ease-in-out;
+}
+
+#login-button:hover {
+	filter: brightness(1.1);
+}
+
+#login-button:disabled {
+	cursor: default;
+	opacity: .65;
 }

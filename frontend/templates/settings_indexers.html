@@ -56,6 +56,7 @@
 
 	{% set edit_content %}
 		<p class="error hidden" id="edit-error"></p>
+		<p class="description hidden" id="edit-prowlarr-note">This indexer is managed by Prowlarr. Changes to the title, URL, API key, categories or enabled state are overwritten on the next sync from Prowlarr.</p>
 		<form id="edit-indexer-form">
 			<table class="fold-table">
 				<tr>
@@ -99,6 +100,23 @@
 		<h2>DDL</h2>
 		<div id="ddl-indexer-list" class="client-list">
 			<button id="add-ddl-indexer" class="add-button icon-text-color" title="Add DDL indexer">
+				<img src="{{url_base}}/static/img/cancel.svg" alt="">
+			</button>
+		</div>
+
+		<h2>Torrent</h2>
+		<p class="description indexer-help">
+			Add torrent indexers via <a href="https://github.com/Jackett/Jackett" target="_blank">Jackett</a> or <a href="https://prowlarr.com" target="_blank">Prowlarr</a>, the same way as in Sonarr and Radarr.
+			Torrents are sent to the torrent client set under <a href="{{url_base}}/settings/downloadclients">Download Clients</a>.
+			<br><br>
+			<b>Jackett</b>: add a Torznab indexer and use the "Copy Torznab Feed" URL of the indexer and the Jackett API key.
+			<br>
+			<b>Prowlarr (manual)</b>: add a Torznab indexer with the URL <code>http://prowlarr:9696/{id}/</code> and the Prowlarr API key.
+			<br>
+			<b>Prowlarr (automatic sync)</b>: in Prowlarr, go to Settings &rarr; Apps and add a <b>Mylar</b> application. Use the URL of Bubblarr as the Mylar Server and the API key of Bubblarr (Settings &rarr; General) as the API Key. Prowlarr will then add, update and remove its indexers here automatically.
+		</p>
+		<div id="torrent-indexer-list" class="client-list">
+			<button id="add-torrent-indexer" class="add-button icon-text-color" title="Add torrent indexer">
 				<img src="{{url_base}}/static/img/cancel.svg" alt="">
 			</button>
 		</div>

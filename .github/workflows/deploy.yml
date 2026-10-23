@@ -1,9 +1,8 @@
 name: Build and deploy docs
 
+# Run by hand from the Actions tab. Publishes the docs to GitHub Pages (the gh-pages branch).
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   deploy:

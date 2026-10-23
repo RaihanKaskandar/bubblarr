@@ -24,13 +24,13 @@ def _main(
     port: Union[int, None] = None,
     url_base: Union[str, None] = None
 ) -> NoReturn:
-    """The main function of the Kapowarr sub-process.
+    """The main function of the Bubblarr sub-process.
 
     Args:
         start_type (StartType): The type of (re)start.
 
         db_folder (Union[str, None], optional): The folder in which the database
-        will be stored or in which a database is for Kapowarr to use.
+        will be stored or in which a database is for Bubblarr to use.
             Defaults to None.
 
         td_folder (Union[str, None], optional): The folder that direct downloads
@@ -38,11 +38,11 @@ def _main(
             Defaults to None.
 
         log_folder (Union[str, None], optional): The folder in which the logs
-        from Kapowarr will be stored.
+        from Bubblarr will be stored.
             Defaults to None.
 
         log_file (Union[str, None], optional): The filename of the file in which
-        the logs from Kapowarr will be stored.
+        the logs from Bubblarr will be stored.
             Defaults to None.
 
         host (Union[str, None], optional): The host to bind the server to.
@@ -82,7 +82,7 @@ def _main(
 
     set_start_method('spawn')
     setup_logging(log_folder, log_file)
-    LOGGER.info('Starting up Kapowarr')
+    LOGGER.info('Starting up Bubblarr')
 
     if not check_min_python_version(*Constants.MIN_PYTHON_VERSION):
         exit(1)
@@ -159,7 +159,7 @@ def _main(
         ExternalClients.disconnect_clients()
 
         if restart_type is not None:
-            LOGGER.info('Restarting Kapowarr')
+            LOGGER.info('Restarting Bubblarr')
             exit(restart_type.value)
 
         exit(0)
@@ -196,10 +196,10 @@ def _stop_sub_process(proc: Popen) -> None:
 def _run_sub_process(
     start_type: StartType = StartType.STARTUP
 ) -> int:
-    """Start the sub-process that Kapowarr will be run in.
+    """Start the sub-process that Bubblarr will be run in.
 
     Args:
-        start_type (StartType, optional): Why Kapowarr was started.
+        start_type (StartType, optional): Why Bubblarr was started.
             Defaults to `StartType.STARTUP`.
 
     Returns:
@@ -207,8 +207,8 @@ def _run_sub_process(
     """
     env = {
         **environ,
-        "KAPOWARR_RUN_MAIN": "1",
-        "KAPOWARR_START_TYPE": str(start_type.value)
+        "BUBBLARR_RUN_MAIN": "1",
+        "BUBBLARR_START_TYPE": str(start_type.value)
     }
 
     py_exe = get_python_exe()
@@ -231,8 +231,8 @@ def _run_sub_process(
         return 0
 
 
-def Kapowarr() -> int:
-    """The main function of Kapowarr.
+def Bubblarr() -> int:
+    """The main function of Bubblarr.
 
     Returns:
         int: The return code.
@@ -247,16 +247,16 @@ def Kapowarr() -> int:
 
 
 if __name__ == "__main__":
-    if environ.get("KAPOWARR_RUN_MAIN") == "1":
+    if environ.get("BUBBLARR_RUN_MAIN") == "1":
 
         parser = ArgumentParser(
-            description="Kapowarr is a software to build and manage a comic book library, fitting in the *arr suite of software.")
+            description="Bubblarr is a software to build and manage a comic book library, fitting in the *arr suite of software.")
 
         fs = parser.add_argument_group(title="Folders and files")
         fs.add_argument(
             '-d', '--DatabaseFolder',
             type=str,
-            help="The folder in which the database will be stored or in which a database is for Kapowarr to use"
+            help="The folder in which the database will be stored or in which a database is for Bubblarr to use"
         )
         fs.add_argument(
             '-t', '--TempDownloadFolder',
@@ -266,12 +266,12 @@ if __name__ == "__main__":
         fs.add_argument(
             '-l', '--LogFolder',
             type=str,
-            help="The folder in which the logs from Kapowarr will be stored"
+            help="The folder in which the logs from Bubblarr will be stored"
         )
         fs.add_argument(
             '-f', '--LogFile',
             type=str,
-            help="The filename of the file in which the logs from Kapowarr will be stored"
+            help="The filename of the file in which the logs from Bubblarr will be stored"
         )
 
         hs = parser.add_argument_group(title="Hosting settings")
@@ -294,7 +294,7 @@ if __name__ == "__main__":
         args = parser.parse_args()
 
         st = StartType(int(environ.get(
-            "KAPOWARR_START_TYPE",
+            "BUBBLARR_START_TYPE",
             StartType.STARTUP.value
         )))
 
@@ -365,5 +365,5 @@ if __name__ == "__main__":
                 raise e
 
     else:
-        rc = Kapowarr()
+        rc = Bubblarr()
         exit(rc)

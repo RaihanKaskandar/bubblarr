@@ -47,6 +47,19 @@ def extract_files_from_folder(
     Returns:
         List[str]: The filepaths of the files that were extracted.
     """
+    if isfile(source_folder):
+        # Download is a single file (e.g. a torrent with one file),
+        # so there is no folder to extract from. Just move it.
+        volume_folder = Volume(volume_id).get_data().folder
+        dest = join(volume_folder, basename(source_folder))
+        dest = (
+            splitext(dest)[0]
+            + splitext(set_detected_extension(source_folder))[1]
+        )
+        if dest != source_folder:
+            rename_file(source_folder, dest)
+        return [dest]
+
     folder_contents = list_files(
         source_folder,
         FileConstants.SCANNABLE_EXTENSIONS
@@ -169,7 +182,7 @@ class ConvertersManager:
                 32bit systems.
 
         Raises:
-            RuntimeError: The file format is not recognised by Kapowarr, so it
+            RuntimeError: The file format is not recognised by Bubblarr, so it
                 can't be converted from or to either.
             RuntimeError: A converter from the given source format to the given
                 target format is already registered.

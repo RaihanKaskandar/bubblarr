@@ -1,31 +1,46 @@
+const LoginEls = {
+	form: document.querySelector('#login-form'),
+	usernameContainer: document.querySelector('#username-container'),
+	username: document.querySelector('#username-input'),
+	password: document.querySelector('#password-input'),
+	button: document.querySelector('#login-button'),
+	error: document.querySelector('#error-message')
+};
+
+function showError(text) {
+	LoginEls.error.innerText = text;
+	LoginEls.error.classList.remove('hidden');
+};
+
 function loadFields() {
+	// The form is visible straight away, so that it also shows when this
+	// request fails or is slow (e.g. on a fresh iOS home screen web app)
 	fetch(`${url_base}/api/public`)
 	.then(response => response.json())
 	.then(json => {
-		const am = json.result.authentication_method;
-		if (am == 1) {
-			document.querySelector("#username-input").remove();
-			document.querySelector("#login-form").classList.remove('hidden');
-			document.querySelector("#password-input").focus();
-		} else {
-			document.querySelector("#login-form").classList.remove('hidden');
-		};
-	});
+		if (json.result.authentication_method == 1) {
+			// Password only
+			LoginEls.usernameContainer.remove();
+			LoginEls.username = null;
+			LoginEls.password.focus();
+		} else
+			LoginEls.username.focus();
+	})
+	.catch(e => console.log(e));
 };
 
 function login() {
-	const error = document.querySelector('#error-message');
-	error.classList.add('hidden');
+	LoginEls.error.classList.add('hidden');
+	LoginEls.username?.classList.remove('invalid');
+	LoginEls.password.classList.remove('invalid');
 
-	const password_input = document.querySelector('#password-input');
-	const data = {
-		'password': password_input.value
-	};
-	
-	const username_input = document.querySelector('#username-input');
-	if (username_input !== null)
-		data.username = username_input.value
-	
+	const data = {'password': LoginEls.password.value};
+	if (LoginEls.username !== null)
+		data.username = LoginEls.username.value.trim();
+
+	LoginEls.button.disabled = true;
+	LoginEls.button.innerText = 'Logging In...';
+
 	fetch(`${url_base}/api/auth`, {
 		'method': 'POST',
 		'headers': {'Content-Type': 'application/json'},
@@ -37,32 +52,52 @@ function login() {
 	})
 	.then(json => registerLogin(json.result.api_key))
 	.catch(e => {
-		// Login failed
+		LoginEls.button.disabled = false;
+		LoginEls.button.innerText = 'Log In';
 		if (e === 401) {
-			error.classList.remove('hidden');
+			LoginEls.username?.classList.add('invalid');
+			LoginEls.password.classList.add('invalid');
+			showError(
+				LoginEls.username !== null
+					? 'Incorrect username or password'
+					: 'Incorrect password'
+			);
+			LoginEls.password.select();
 		} else {
 			console.log(e);
+			showError("Couldn't reach Bubblarr, try again");
 		};
 	});
 };
 
 function registerLogin(api_key) {
-	const data = JSON.parse(localStorage.getItem('kapowarr'));
+	const data = readStorage();
 	data.api_key = api_key;
-	data.last_login = Date.now();
-	localStorage.setItem('kapowarr', JSON.stringify(data));
+	data.last_login = Date.now() / 1000;
+	writeStorage(data);
 	redirect();
 };
 
 function redirect() {
-	parameters = new URLSearchParams(window.location.search);
-	redirect_value = parameters.get('redirect') || `${url_base}/`;
+	const parameters = new URLSearchParams(window.location.search);
+	let redirect_value = parameters.get('redirect') || `${url_base}/`;
+	// Only redirect within Bubblarr
+	if (!redirect_value.startsWith('/') || redirect_value.startsWith('//'))
+		redirect_value = `${url_base}/`;
 	window.location.href = redirect_value;
 };
 
 // code run on load
 
 const url_base = document.querySelector('#url_base').dataset.value;
+
+if (readStorage().theme === 'dark')
+	document.querySelector(':root').classList.add('dark-mode');
+
+LoginEls.form.addEventListener('submit', e => {
+	e.preventDefault();
+	login();
+});
 
 usingApiKey(false)
 .then(api_key => {
@@ -71,8 +106,7 @@ usingApiKey(false)
 	else
 		loadFields();
 })
-
-if (JSON.parse(localStorage.getItem('kapowarr') || {'theme': 'light'})['theme'] === 'dark')
-	document.querySelector(':root').classList.add('dark-mode');
-
-document.querySelector('#login-form').action = 'javascript:login();';
+.catch(e => {
+	console.log(e);
+	loadFields();
+});

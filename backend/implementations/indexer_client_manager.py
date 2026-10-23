@@ -24,21 +24,59 @@ from backend.internals.db import get_db
 ICF = IndexerClientField
 
 
+DEFAULT_PRIORITY = 25
+DEFAULT_CATEGORIES = [7030]
+"Newznab category for Books/Comics"
+DEFAULT_MIN_SEEDERS = 1
+
+
 def _validate_indexer_data(
     data: Mapping[str, Any],
     required_tokens: Tuple[IndexerClientField, ...],
     enforce_existence: bool = True
 ) -> Dict[str, Any]:
-    filtered_data: Dict[str, Any] = {}
+    """Validate and normalise indexer data.
+
+    Args:
+        data (Mapping[str, Any]): The data to validate.
+        required_tokens (Tuple[IndexerClientField, ...]): The fields that the
+            client uses.
+        enforce_existence (bool, optional): Raise an exception if a field is
+            missing, instead of defaulting it to None.
+            Defaults to True.
+
+    Raises:
+        KeyNotFound: A required key was not found.
+        InvalidKeyValue: One of the keys has an invalid value.
+
+    Returns:
+        Dict[str, Any]: A value for every `IndexerClientField`, in a format
+            that can be stored in the database. Fields that the client doesn't
+            use are set to None.
+    """
+    # Fields that have a sensible default, so can be left out
+    defaults: Dict[IndexerClientField, Any] = {
+        ICF.PRIORITY: DEFAULT_PRIORITY,
+        ICF.CATEGORIES: DEFAULT_CATEGORIES,
+        ICF.MIN_SEEDERS: DEFAULT_MIN_SEEDERS,
+        ICF.API_KEY: ''
+    }
+
+    filtered_data: Dict[str, Any] = {
+        key.value: None
+        for key in ICF
+    }
+    filtered_data[ICF.PRIORITY.value] = DEFAULT_PRIORITY
+
     for key in required_tokens:
-        if key.value not in data:
+        value = data.get(key.value)
+        if value is None and key in defaults:
+            value = defaults[key]
+
+        if key.value not in data and key not in defaults:
             if enforce_existence:
                 raise KeyNotFound(key.value)
-            else:
-                filtered_data[key.value] = None
-                continue
-
-        value = data[key.value]
+            continue
 
         if (
             key in (
@@ -60,10 +98,10 @@ def _validate_indexer_data(
                 raise InvalidKeyValue(key.value, value)
             filtered_data[key.value] = value
 
-        elif (
-            key == ICF.GC_SERVICE_PREFERENCE
-            and value is not None
-        ):
+        elif key == ICF.GC_SERVICE_PREFERENCE:
+            if value is None:
+                continue
+
             if not isinstance(value, list):
                 raise InvalidKeyValue(key.value, value)
 
@@ -84,21 +122,53 @@ def _validate_indexer_data(
 
             filtered_data[key.value] = str(value)
 
-        elif (
-            key == ICF.GC_AVOID_LARGE_DOWNLOADS
-            and value is not None
-        ):
+        elif key == ICF.GC_AVOID_LARGE_DOWNLOADS:
+            if value is None:
+                continue
+
             if not isinstance(value, bool):
                 raise InvalidKeyValue(key.value, value)
             filtered_data[key.value] = value
 
-        elif key in required_tokens:
-            if not isinstance(value, str):
+        elif key == ICF.CATEGORIES:
+            if isinstance(value, str):
+                value = [v.strip() for v in value.split(',') if v.strip()]
+
+            if not isinstance(value, list) or not value:
+                raise InvalidKeyValue(key.value, value)
+
+            try:
+                categories = [int(v) for v in value]
+            except (TypeError, ValueError):
+                raise InvalidKeyValue(key.value, value)
+
+            if any(c <= 0 for c in categories):
+                raise InvalidKeyValue(key.value, value)
+
+            filtered_data[key.value] = str(CommaList(map(str, categories)))
+
+        elif key == ICF.MIN_SEEDERS:
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or value < 0
+            ):
+                raise InvalidKeyValue(key.value, value)
+            filtered_data[key.value] = value
+
+        elif key == ICF.PRIORITY:
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or not 1 <= value <= 50
+            ):
                 raise InvalidKeyValue(key.value, value)
             filtered_data[key.value] = value
 
         else:
-            filtered_data[key.value] = None
+            if not isinstance(value, str):
+                raise InvalidKeyValue(key.value, value)
+            filtered_data[key.value] = value
 
     return filtered_data
 
@@ -119,14 +189,20 @@ class BaseIndexerClient(IndexerClient):
             SELECT
                 enabled,
                 title, url,
-                gc_service_preference, gc_avoid_large_downloads
+                gc_service_preference, gc_avoid_large_downloads,
+                api_key, categories, min_seeders, priority,
+                prowlarr_synced
             FROM indexer_clients
             WHERE id = ?
             LIMIT 1;
             """,
             (indexer_id,)
         ).fetchone()
-        self._enabled: bool = data['enabled']
+        self._load_data(data)
+        return
+
+    def _load_data(self, data: Mapping[str, Any]) -> None:
+        self._enabled: bool = bool(data['enabled'])
         self._title: str = data['title']
         self._url: str = data['url']
 
@@ -134,13 +210,29 @@ class BaseIndexerClient(IndexerClient):
             data["gc_service_preference"] is not None
             and data["gc_avoid_large_downloads"] is not None
         ):
-            self._gc_service_preference = CommaList(
-                data["gc_service_preference"])
-            self._gc_avoid_large_downloads = data["gc_avoid_large_downloads"]
+            self._gc_service_preference: Union[CommaList, None] = CommaList(
+                data["gc_service_preference"]
+            )
+            self._gc_avoid_large_downloads: Union[bool, None] = bool(
+                data["gc_avoid_large_downloads"]
+            )
         else:
             self._gc_service_preference = None
             self._gc_avoid_large_downloads = None
 
+        self._api_key: Union[str, None] = data["api_key"]
+        self._categories: Union[List[int], None] = (
+            [int(c) for c in CommaList(data["categories"])]
+            if data["categories"] is not None
+            else None
+        )
+        self._min_seeders: Union[int, None] = data["min_seeders"]
+        self._priority: int = (
+            data["priority"]
+            if data["priority"] is not None
+            else DEFAULT_PRIORITY
+        )
+        self._prowlarr_synced: bool = bool(data["prowlarr_synced"])
         return
 
     def get_indexer_data(self) -> IndexerClientData:
@@ -153,15 +245,27 @@ class BaseIndexerClient(IndexerClient):
             'title': self._title,
             'url': self._url,
             'gc_service_preference': self._gc_service_preference,
-            'gc_avoid_large_downloads': self._gc_avoid_large_downloads
+            'gc_avoid_large_downloads': self._gc_avoid_large_downloads,
+            'api_key': self._api_key,
+            'categories': self._categories,
+            'min_seeders': self._min_seeders,
+            'priority': self._priority,
+            'prowlarr_synced': self._prowlarr_synced
         }
 
-    def update_indexer(self, data: Mapping[str, Any]) -> None:
-        LOGGER.info(f"Updating indexer {self._id}: {data}")
+    def update_indexer(
+        self,
+        data: Mapping[str, Any],
+        run_test: bool = True
+    ) -> None:
+        LOGGER.info(
+            f"Updating indexer {self._id}: {_redact(data)}"
+        )
         filtered_data = _validate_indexer_data(data, self.required_tokens)
 
-        # Raises exception on fail
-        self.test(**filtered_data)
+        if run_test:
+            # Raises exception on fail
+            self.test(**filtered_data)
 
         get_db().execute("""
             UPDATE indexer_clients
@@ -170,7 +274,11 @@ class BaseIndexerClient(IndexerClient):
                 title = :title,
                 url = :url,
                 gc_service_preference = :gc_service_preference,
-                gc_avoid_large_downloads = :gc_avoid_large_downloads
+                gc_avoid_large_downloads = :gc_avoid_large_downloads,
+                api_key = :api_key,
+                categories = :categories,
+                min_seeders = :min_seeders,
+                priority = :priority
             WHERE id = :id;
             """,
             {
@@ -178,20 +286,10 @@ class BaseIndexerClient(IndexerClient):
                 "id": self._id
             }
         )
-        self._enabled = filtered_data[ICF.ENABLED.value]
-        self._title = filtered_data[ICF.TITLE.value]
-        self._url = filtered_data[ICF.URL.value]
-        if (
-            "gc_service_preference" in self.required_tokens
-            and "gc_avoid_large_downloads" in self.required_tokens
-        ):
-            self._gc_service_preference = CommaList(
-                filtered_data["gc_service_preference"]
-            )
-            self._gc_avoid_large_downloads = filtered_data[
-                "gc_avoid_large_downloads"
-            ]
-
+        self._load_data({
+            **filtered_data,
+            "prowlarr_synced": self._prowlarr_synced
+        })
         return
 
     def delete_indexer(self) -> None:
@@ -201,6 +299,14 @@ class BaseIndexerClient(IndexerClient):
             (self.id,)
         )
         return
+
+
+def _redact(data: Mapping[str, Any]) -> Dict[str, Any]:
+    "Hide the API key in data that's going to be logged"
+    return {
+        k: ('<redacted>' if k == ICF.API_KEY.value and v else v)
+        for k, v in data.items()
+    }
 
 
 # region Clients
@@ -362,6 +468,8 @@ class IndexerClients:
         enabled: bool,
         title: str,
         url: str,
+        prowlarr_synced: bool = False,
+        run_test: bool = True,
         **extra_fields: Any
     ) -> IndexerClient:
         """Add an indexer client.
@@ -378,6 +486,13 @@ class IndexerClients:
             title (str): The title to give the indexer.
 
             url (str): The url on which the indexer is available.
+
+            prowlarr_synced (bool, optional): Whether the indexer is added
+                by Prowlarr (app sync), instead of by the user.
+                Defaults to False.
+
+            run_test (bool, optional): Test the indexer before adding it.
+                Defaults to True.
 
             extra_fields (kwargs, optional): Extra fields and their values,
                 possibly used by the indexer.
@@ -423,26 +538,22 @@ class IndexerClients:
             **extra_fields
         }
         LOGGER.info(
-            f"Adding indexer: {download_type=}, {client_type=}, {data=}"
+            "Adding indexer: download_type=%s, client_type=%s, data=%s",
+            download_type, client_type, _redact(data)
         )
         filtered_data = _validate_indexer_data(
             data,
             ClientClass.required_tokens
         )
 
-        # Raises exception on fail
-        ClientClass.test(**filtered_data)
+        if run_test:
+            # Raises exception on fail
+            ClientClass.test(**filtered_data)
 
-        filtered_data = {
-            key: filtered_data.get(key)
-            for key in (
-                'download_type', 'client_type',
-                *ICF._value2member_map_
-            )
-        }
         filtered_data.update({
             'download_type': ClientClass.download_type.value,
-            'client_type': client_type
+            'client_type': client_type,
+            'prowlarr_synced': prowlarr_synced
         })
 
         indexer_id = cursor.execute(
@@ -451,17 +562,35 @@ class IndexerClients:
                 enabled,
                 download_type, client_type,
                 title, url,
-                gc_service_preference, gc_avoid_large_downloads
+                gc_service_preference, gc_avoid_large_downloads,
+                api_key, categories, min_seeders, priority,
+                prowlarr_synced
             ) VALUES (
                 :enabled,
                 :download_type, :client_type,
                 :title, :url,
-                :gc_service_preference, :gc_avoid_large_downloads
+                :gc_service_preference, :gc_avoid_large_downloads,
+                :api_key, :categories, :min_seeders, :priority,
+                :prowlarr_synced
             );
             """,
             filtered_data
         ).lastrowid
         return cls.get_client(indexer_id)
+
+    @staticmethod
+    def set_prowlarr_synced(indexer_id: int, prowlarr_synced: bool) -> None:
+        """Set whether an indexer is managed by Prowlarr (app sync).
+
+        Args:
+            indexer_id (int): The ID of the indexer client.
+            prowlarr_synced (bool): Whether it's managed by Prowlarr.
+        """
+        get_db().execute(
+            "UPDATE indexer_clients SET prowlarr_synced = ? WHERE id = ?;",
+            (prowlarr_synced, indexer_id)
+        )
+        return
 
     @classmethod
     def get_all_data(cls) -> List[IndexerClientData]:
@@ -495,16 +624,16 @@ class IndexerClients:
         Returns:
             List[IndexerClient]: The list of all indexer clients.
         """
-        cursor = get_db()
-        cursor.execute("""
+        # Fetch all rows first, as initialising a client uses the same cursor
+        clients = get_db().execute("""
             SELECT download_type, client_type, id
             FROM indexer_clients
             ORDER BY title, id;
-        """)
+        """).fetchall()
 
         return [
             cls.clients[DownloadType(client[0])][client[1]](client[2])
-            for client in cursor
+            for client in clients
         ]
 
     @classmethod

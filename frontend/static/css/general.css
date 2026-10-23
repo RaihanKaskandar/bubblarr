@@ -64,53 +64,62 @@ noscript {
 	--tool-bar-height: 3.5rem;
 	--nav-width: clamp(160px, 20vw, 210px);
 
+	/* Neutrals are the ones of Sonarr, the accent is a muted purple */
 	--light-color: #ffffff;
-	--off-light-color: #f6f6f6;
-	--dark-hover-color: #ececec;
+	--off-light-color: #f5f7fa;
+	--dark-hover-color: #eceef2;
 	--mid-color: #dde6e9;
-	--darker-color: #808080;
-	--dark-color: #464b51;
+	--darker-color: #4f566f;
+	--dark-color: #3a3f51;
 
-	--accent-color: #ebc700;
-	--success-color: #54db68;
-	--error-color: #db5461;
+	--accent-color: #7458c4;
+	/* Text and icons on top of the accent color */
+	--on-accent-color: #ffffff;
+	/* Accent color on the (dark) navigation bar */
+	--nav-accent-color: #b4a3ee;
+	--success-color: #27c24c;
+	--error-color: #f05050;
 
-	--header-background-color: var(--accent-color);
-	--header-color: var(--dark-color);
+	--header-background-color: #5d4a94;
+	--header-color: #ffffff;
 	--tool-bar-color: var(--darker-color);
 
 	--background-color: var(--off-light-color);
 	--hover-color: var(--dark-hover-color);
 	--border-color: var(--mid-color);
 	--foreground-color: var(--light-color);
-	--text-color: var(--dark-color);
-	--dimmed-text-color: var(--darker-color);
+	--text-color: #515253;
+	--dimmed-text-color: #909293;
 
 	--nav-background-color: var(--dark-color);
-	--nav-color: var(--light-color);
+	--nav-color: #e1e2e3;
 	--volume-info-background-color: var(--dark-color);
 }
 
 :root.dark-mode {
 	--dark-color: #202020;
-	--darker-color: #242424;
-	--gray-color: #272727;
-	--mid-color: #7f7f7f;
-	--dimmed-light-color: #c5c5c5;
-	--light-color: #dde6e9;
+	--darker-color: #262626;
+	--gray-color: #333333;
+	--mid-color: #4a4a4a;
+	--dimmed-light-color: #a0a0a0;
+	--light-color: #e1e2e3;
 
-	--header-background-color: var(--accent-color);
-	--header-color: var(--darker-color);
+	--accent-color: #a28fe6;
+	--on-accent-color: #202020;
+	--nav-accent-color: #b4a3ee;
+
+	--header-background-color: #2a2a2a;
+	--header-color: #e1e2e3;
 	--tool-bar-color: var(--darker-color);
 
 	--background-color: var(--dark-color);
-	--hover-color: var(--darker-color);
+	--hover-color: #2c2c2c;
 	--foreground-color: var(--gray-color);
 	--border-color: var(--mid-color);
 	--dimmed-text-color: var(--dimmed-light-color);
-	--text-color: var(--light-color);
+	--text-color: #cccccc;
 
-	--nav-background-color: var(--gray-color);
+	--nav-background-color: #2a2a2a;
 	--nav-color: var(--light-color);
 	--volume-info-background-color: var(--dark-color);
 }
@@ -141,7 +150,8 @@ noscript {
 /*  */
 :root:not(.dark-mode) :where(
 	.icon-light-color,
-	.tool-bar
+	.tool-bar,
+	#toggle-nav
 ) img {
 	/* Equal to --light-color */
 	filter: invert(99%) sepia(31%) saturate(2%) hue-rotate(101deg) brightness(111%) contrast(100%);
@@ -150,8 +160,7 @@ noscript {
 :root:not(.dark-mode) :where(
 	.icon-dark-color,
 	.icon-text-color,
-	.window > section > .window-header,
-	#toggle-nav
+	.window > section > .window-header
 ) img {
 	/* Equal to --dark-color */
 	filter: invert(28%) sepia(9%) saturate(463%) hue-rotate(172deg) brightness(91%) contrast(88%);
@@ -161,15 +170,15 @@ noscript {
 	.icon-light-color,
 	.icon-text-color,
 	.tool-bar,
-	.window > section > .window-header
+	.window > section > .window-header,
+	#toggle-nav
 ) img {
 	/* Equal to --light-color */
 	filter: invert(97%) sepia(10%) saturate(337%) hue-rotate(164deg) brightness(94%) contrast(93%);
 }
 
 :root.dark-mode :where(
-	.icon-dark-color,
-	#toggle-nav
+	.icon-dark-color
 ) img {
 	/* Equal to --gray-color */
 	filter: invert(16%) sepia(0%) saturate(23%) hue-rotate(241deg) brightness(95%) contrast(97%);
@@ -186,11 +195,18 @@ noscript {
 /*  */
 /* Body */
 /*  */
+html {
+	height: 100%;
+}
+
+/* The page always fills exactly the visible window and only the content
+   area scrolls. Sizing with flex instead of viewport units avoids the page
+   ending up taller than the window at some zoom levels and in web apps. */
 body {
-	height: 100dvh;
+	height: 100%;
 	display: flex;
 	flex-direction: column;
-	overflow-y: auto;
+	overflow: hidden;
 	background-color: var(--background-color);
 	font-family: 'Roboto', 'open sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
 }
@@ -199,19 +215,29 @@ body {
 /* Header */
 /*  */
 header {
-	height: var(--header-height);
+	/* On phones the header also fills the space behind the status bar (and
+	   the notch in landscape), so that it blends in like a native app */
+	height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+	min-height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+	flex: 0 0 auto;
 
 	display: flex;
 	justify-content: space-between;
 	gap: .75rem;
 
 	padding: .5rem;
+	padding-top: calc(.5rem + env(safe-area-inset-top, 0px));
+	padding-left: max(.5rem, env(safe-area-inset-left, 0px));
+	padding-right: max(.5rem, env(safe-area-inset-right, 0px));
 	background-color: var(--header-background-color);
 
 	font-size: .9rem;
 }
 
 .menu-title-container {
+	/* Line the search bar up with the content, like Sonarr */
+	width: calc(var(--nav-width) - .5rem);
+	flex: 0 0 auto;
 	display: flex;
 	gap: .5rem;
 	align-items: center;
@@ -229,6 +255,139 @@ header {
 
 .menu-title-container > a {
 	width: 3rem;
+	display: flex;
+	align-items: center;
+}
+
+/*  */
+/* Global search */
+/*  */
+#global-search {
+	position: relative;
+	flex: 0 1 22rem;
+	margin-right: auto;
+	align-self: center;
+
+	display: flex;
+	align-items: center;
+	gap: .6rem;
+
+	color: var(--header-color);
+}
+
+#global-search > svg {
+	width: 1rem;
+	height: 1rem;
+	flex: 0 0 auto;
+	opacity: .85;
+}
+
+#global-search-input {
+	width: 100%;
+	height: 2.2rem;
+	padding: 0 .1rem;
+
+	border-bottom: 1px solid color-mix(in srgb, var(--header-color) 45%, transparent);
+	outline: 0;
+	background-color: transparent;
+	color: var(--header-color);
+
+	font-family: inherit;
+	font-size: 1rem;
+
+	transition: border-color .2s ease-out;
+}
+
+#global-search-input:focus {
+	border-bottom-color: var(--header-color);
+}
+
+#global-search-input::placeholder {
+	color: color-mix(in srgb, var(--header-color) 70%, transparent);
+}
+
+#global-search-input::-webkit-search-cancel-button {
+	filter: brightness(0) invert(1);
+	cursor: pointer;
+}
+
+#global-search-results {
+	position: absolute;
+	top: calc(100% + .4rem);
+	left: 0;
+	right: 0;
+	min-width: 18rem;
+	max-height: min(28rem, 70vh);
+	overflow-y: auto;
+	z-index: 10;
+
+	padding: .3rem 0;
+	border-radius: 4px;
+	background-color: var(--foreground-color);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+	color: var(--text-color);
+
+	list-style: none;
+}
+
+#global-search-results li {
+	display: flex;
+	align-items: center;
+	gap: .75rem;
+
+	padding: .4rem .75rem;
+	cursor: pointer;
+}
+
+#global-search-results li[aria-selected="true"] {
+	background-color: var(--hover-color);
+}
+
+#global-search-results img {
+	width: 2.2rem;
+	height: 3.3rem;
+	flex: 0 0 auto;
+	object-fit: cover;
+	border-radius: 2px;
+	background-color: var(--border-color);
+}
+
+#global-search-results li > div {
+	min-width: 0;
+}
+
+.global-search-title {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-weight: 500;
+}
+
+.global-search-details {
+	color: var(--dimmed-text-color);
+	font-size: .8rem;
+}
+
+#global-search-results .global-search-add {
+	border-top: 1px solid var(--border-color);
+}
+
+#global-search-results li:first-child.global-search-add {
+	border-top: 0;
+}
+
+.global-search-add-icon {
+	width: 2.2rem;
+	height: 2.2rem;
+	flex: 0 0 auto;
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 50%;
+	background-color: var(--accent-color);
+	color: var(--on-accent-color);
+	font-size: 1.4rem;
+	line-height: 1;
 }
 
 /*  */
@@ -271,7 +430,7 @@ nav a {
 
 nav a:hover {
 	text-decoration: none;
-	color: var(--accent-color);
+	color: var(--nav-accent-color);
 }
 
 nav svg {
@@ -285,7 +444,7 @@ nav svg {
 }
 
 .current-nav {
-	color: var(--accent-color);
+	color: var(--nav-accent-color);
 }
 
 #task-queue {
@@ -304,7 +463,7 @@ nav svg {
 	margin-left: .3rem;
 	border-radius: 2px;
 	background-color: var(--accent-color);
-	color: var(--nav-background-color);
+	color: var(--on-accent-color);
 	font-size: .7rem;
 	font-weight: 700;
 }
@@ -314,12 +473,14 @@ nav svg {
 /*  */
 .nav-main {
 	position: relative;
-	flex-grow: 1;
+	flex: 1 1 auto;
+	min-height: 0;
 	display: flex;
 }
 
 main {
-	height: calc(100dvh - var(--header-height));
+	min-height: 0;
+	min-width: 0;
 	width: 100%;
 
 	display: flex;
@@ -403,7 +564,7 @@ main > *:not(.tool-bar-container) {
 	padding: 0rem .75rem;
 	border: 3px solid var(--accent-color);
 	background-color: var(--accent-color);
-	color: var(--tool-bar-color);
+	color: var(--on-accent-color);
 }
 
 #previous-page {
@@ -508,6 +669,20 @@ main > *:not(.tool-bar-container) {
 
 	#toggle-nav {
 		display: inline-flex;
+	}
+	.menu-title-container {
+		width: auto;
+	}
+	#global-search {
+		flex: 1 1 auto;
+		margin-right: .25rem;
+	}
+	#global-search-results {
+		position: fixed;
+		top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+		left: .5rem;
+		right: .5rem;
+		min-width: 0;
 	}
 	#nav-bar {
 		position: absolute;

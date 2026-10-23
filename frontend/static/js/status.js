@@ -17,7 +17,7 @@ const StatEls = {
 const about_table = `
 | Key| Value |
 |--------|--------|
-| Kapowarr version | {k_version} |
+| Bubblarr version | {k_version} |
 | Python version | {p_version} |
 | Database version | {d_version} |
 | Database location | {d_loc} |

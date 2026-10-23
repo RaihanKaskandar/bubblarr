@@ -1,10 +1,7 @@
 # Site Details
-site_name: Kapowarr Docs
-site_description: The official guide for Kapowarr 
-site_author: Casvt
-repo_url: https://github.com/Casvt/Kapowarr
-edit_uri: blob/development/docs/src/
-repo_name: Casvt/Kapowarr
+site_name: Bubblarr Docs
+site_description: The guide for Bubblarr, a fork of Kapowarr
+site_author: Casvt and Bubblarr contributors
 docs_dir: src/
 
 
@@ -34,13 +31,13 @@ theme:
   palette:
     # Light mode
     - media: "(prefers-color-scheme: light)"
-      scheme: Kapowarr
+      scheme: Bubblarr
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to dark mode
     # Dark mode
     - media: "(prefers-color-scheme: dark)"
-      scheme: Kapowarr-dark
+      scheme: Bubblarr-dark
       toggle:
         icon: material/toggle-switch
         name: Switch to light mode

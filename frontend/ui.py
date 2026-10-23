@@ -31,17 +31,22 @@ def ui_manifest():
     return send_file(
         BytesIO(dumps(
             {
-                "name": "Kapowarr",
-                "short_name": "Kapowarr",
-                "description": "Kapowarr is a software to build and manage a comic book library, fitting in the *arr suite of software.",
+                "name": "Bubblarr",
+                "short_name": "Bubblarr",
+                "description": "Bubblarr is a software to build and manage a comic book library, fitting in the *arr suite of software.",
                 "display": "standalone",
                 "orientation": "portrait-primary",
                 "start_url": f"{Server.url_base}/",
                 "scope": f"{Server.url_base}/",
                 "id": f"{Server.url_base}/",
-                "background_color": "#464b51",
-                "theme_color": "#ebc700",
+                "background_color": "#f5f7fa",
+                "theme_color": "#5d4a94",
                 "icons": [
+                    {
+                        "src": f"{Server.url_base}/static/img/icon.png",
+                        "type": "image/png",
+                        "sizes": "256x256"
+                    },
                     {
                         "src": f"{Server.url_base}/static/img/favicon.svg",
                         "type": "image/svg+xml",
@@ -79,6 +84,11 @@ def ui_library_import():
 @ui.route('/volumes/<id>', methods=methods)
 def ui_view_volume(id):
     return render('view_volume.html')
+
+
+@ui.route('/calendar', methods=methods)
+def ui_calendar():
+    return render('calendar.html')
 
 
 @ui.route('/activity/queue', methods=methods)
@@ -144,3 +154,8 @@ def ui_metadata():
 @ui.route('/settings/general', methods=methods)
 def ui_general():
     return render('settings_general.html')
+
+
+@ui.route('/settings/logs', methods=methods)
+def ui_logs():
+    return render('settings_logs.html')

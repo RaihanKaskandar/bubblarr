@@ -163,7 +163,8 @@ class Transmission(BaseExternalClient):
     def _update_statuses(self) -> None:
         fields = [
             "hash_string", "total_size", "percent_done", "rate_download",
-            "status", "error", "error_string", "peers_getting_from_us"
+            "status", "error", "error_string", "peers_getting_from_us",
+            "name", "metadata_percent_complete"
         ]
 
         torrents: Dict[str, Dict[str, Any]] = {
@@ -182,6 +183,7 @@ class Transmission(BaseExternalClient):
         for t_hash in self.statuses:
             if t_hash not in torrents:
                 self.statuses[t_hash] = None
+                continue
 
             torrent = torrents[t_hash]
 
@@ -224,7 +226,13 @@ class Transmission(BaseExternalClient):
                 'size': int(torrent.get('total_size', 0)),
                 'progress': round(torrent["percent_done"] * 100.0, 2),
                 'speed': dlspeed,
-                'state': state
+                'state': state,
+                # Only the real name once the metadata is fetched
+                'name': (
+                    torrent.get('name') or None
+                    if torrent.get('metadata_percent_complete', 0) >= 1
+                    else None
+                )
             }
 
         self.last_update = time()
