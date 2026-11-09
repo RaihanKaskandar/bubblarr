@@ -15,7 +15,7 @@ from multiprocessing.pool import Pool
 from os import cpu_count, environ, sep
 from os.path import basename, dirname, exists, isfile, join
 from re import compile
-from subprocess import run
+from subprocess import DEVNULL, PIPE, Popen, run
 from sys import base_exec_prefix, executable, maxsize, platform, version_info
 from threading import current_thread
 from typing import (TYPE_CHECKING, Any, Callable, Collection, Dict, Iterable,
@@ -218,6 +218,52 @@ def run_rar(args: List[str]) -> CompletedProcess[str]:
 
     exe = folder_path('backend', 'lib', RAR_EXECUTABLES[get_os_type()])
     return run([exe, *args], capture_output=True, text=True)
+
+
+def read_file_from_rar(
+    archive: str,
+    file: str,
+    max_size: int
+) -> Union[bytes, None]:
+    """Read a file inside a rar archive without extracting it to disk.
+
+    Args:
+        archive (str): The filepath of the archive.
+        file (str): The path of the file inside the archive.
+        max_size (int): Give up when the file is larger than this many bytes.
+
+    Raises:
+        KeyError: Platform not supported.
+
+    Returns:
+        Union[bytes, None]: The content of the file, or `None` if it's too big.
+    """
+    from backend.base.files import folder_path
+
+    exe = folder_path('backend', 'lib', RAR_EXECUTABLES[get_os_type()])
+    process = Popen(
+        [
+            exe,
+            "p", # Print file to stdout
+            "-inul", # Don't print anything else
+            "-p-", # Don't ask for a password
+            archive,
+            file
+        ],
+        stdin=DEVNULL,
+        stdout=PIPE,
+        stderr=DEVNULL
+    )
+    try:
+        content = process.stdout.read(max_size + 1) # type: ignore
+    finally:
+        process.kill()
+        process.communicate()
+
+    if len(content) > max_size:
+        return None
+
+    return content
 
 
 # region Helpers

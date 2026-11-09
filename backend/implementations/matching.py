@@ -26,6 +26,22 @@ clean_title_regex = compile(
 )
 
 
+def clean_title(title: str) -> str:
+    """Reduce a title to the form that titles are compared in. Two titles
+    refer to the same thing when their clean titles are equal.
+
+    Args:
+        title (str): The title.
+
+    Returns:
+        str: The clean title.
+    """
+    return clean_title_regex.sub(
+        '',
+        fully_normalise_string(title).lower()
+    ).replace(' ', '')
+
+
 def match_title(
     title1: str,
     title2: str,
@@ -43,20 +59,13 @@ def match_title(
     Returns:
         bool: Whether the titles match.
     """
-    clean_reference_title = clean_title_regex.sub(
-        '',
-        fully_normalise_string(title1).lower()
-    ).replace(' ', '')
-
-    clean_title = clean_title_regex.sub(
-        '',
-        fully_normalise_string(title2).lower()
-    ).replace(' ', '')
+    clean_reference_title = clean_title(title1)
+    clean_check_title = clean_title(title2)
 
     if allow_contains:
-        return clean_title in clean_reference_title
+        return clean_check_title in clean_reference_title
     else:
-        return clean_reference_title == clean_title
+        return clean_reference_title == clean_check_title
 
 
 def match_year(

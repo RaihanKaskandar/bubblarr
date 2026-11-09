@@ -795,6 +795,7 @@ class DownloadHandler(metaclass=Singleton):
             join(folder, f)
             for f in files_in_folder
             if f not in files_in_queue
+            and f != Constants.UPLOAD_FOLDER
         ]
 
         for f in ghost_files:

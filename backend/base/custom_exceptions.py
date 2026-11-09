@@ -306,6 +306,66 @@ class RemoteMappingInvalid(KapowarrException):
 
 
 # region Volumes
+class UploadNotFound(KapowarrException):
+    "The upload with the given ID was not found"
+
+    def __init__(self, upload_id: str) -> None:
+        self.upload_id = upload_id
+        LOGGER.warning(f"Upload not found: {upload_id}")
+        return
+
+    @property
+    def api_response(self) -> ApiResponse:
+        return {
+            "code": 404,
+            "error": self.__class__.__name__,
+            "result": {
+                "upload_id": self.upload_id
+            }
+        }
+
+
+class UploadOffsetMismatch(KapowarrException):
+    "The chunk doesn't continue where the upload currently is"
+
+    def __init__(self, received: int) -> None:
+        self.received = received
+        return
+
+    @property
+    def api_response(self) -> ApiResponse:
+        return {
+            "code": 409,
+            "error": self.__class__.__name__,
+            "result": {
+                "received": self.received
+            }
+        }
+
+
+class UploadNoSpace(KapowarrException):
+    "There isn't enough free disk space to store the upload"
+
+    def __init__(self, required: int, available: int) -> None:
+        self.required = required
+        self.available = available
+        LOGGER.warning(
+            f"Not enough space for upload: {required} > {available}"
+        )
+        return
+
+    @property
+    def api_response(self) -> ApiResponse:
+        return {
+            "code": 507,
+            "error": self.__class__.__name__,
+            "result": {
+                "required": self.required,
+                "available": self.available
+            }
+        }
+
+
 class VolumeNotFound(KapowarrException):
     "The volume with the given (comicvine) key was not found"
 

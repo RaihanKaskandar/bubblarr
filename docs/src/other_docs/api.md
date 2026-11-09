@@ -114,7 +114,7 @@ Set the webhook URLs in Settings → General → Webhooks. Bubblarr then POSTs a
 | Event | When |
 | ----- | ---- |
 | `volume.added` | A volume was added to the library (by any means). |
-| `download.imported` | Downloaded issues were added to the library. For torrents that seed, this is when the files are copied to the library. |
+| `download.imported` | Downloaded or uploaded issues were added to the library. For torrents that seed, this is when the files are copied to the library. For uploads, the `source` is `Upload`. |
 | `download.failed` | A download failed. |
 | `test` | The Test button in the settings was pressed. |
 
@@ -158,6 +158,59 @@ def is_from_bubblarr(body: bytes, header: str, secret: str) -> bool:
     expected = 'sha256=' + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, header)
 ```
+
+## Uploads
+
+Add a comic file to the library from somewhere else. The file is uploaded in chunks, so that it doesn't matter when a reverse proxy limits the size of a request.
+
+1. **`POST /api/uploads`** with the JSON `{"filename": "Batman 012 (2017).cbz", "size": 1234}`, where `size` is in bytes. Gives `201` with the `id` of the upload. Gives `400` if the file type isn't supported and `507` if there isn't enough free disk space.
+2. **`PUT /api/uploads/<id>?offset=<position>`** for each chunk, with the bytes as the body and `Content-Type: application/octet-stream`. Gives the amount of bytes the server has in `received`. Chunks have to be sent one at a time and in order. Sending a chunk again is fine. If the offset would leave a gap in the file, then `409` is returned with the amount of bytes the server has in `received`.
+3. **`POST /api/uploads/<id>/complete`** after the last chunk. Gives the proposal (see below).
+4. **`POST /api/uploads/<id>/import`** with the JSON `{"volume_id": 2, "issue_ids": [14]}` to move the file into the library. Gives `201` with the final `filepath`. An existing file is never overwritten; the file is added next to it.
+
+The other endpoints:
+
+- **`GET /api/uploads`** lists the proposals of all finished uploads that aren't imported yet, with the match based on the current library.
+- **`POST /api/uploads/<id>/match`** with the JSON `{"volume_id": 2}` shows what importing into that volume would do. Add `issue_ids` to choose the issues instead of letting Bubblarr find them. Gives the same object as `match` in the proposal.
+- **`DELETE /api/uploads/<id>`** deletes an upload.
+
+A proposal looks like this:
+
+```json
+{
+    "id": "5c1e9e4d2a7b4f0c8a3d6e1f2b9c7a10",
+    "filename": "Batman 012 (2017).cbz",
+    "size": 1234,
+    "created_at": 1793577600,
+    "warnings": [],
+    "detected": {
+        "source": "filename",
+        "series": "Batman",
+        "issue_number": 12.0,
+        "volume_number": null,
+        "year": 2017
+    },
+    "match": {
+        "volume_id": 2,
+        "volume_title": "Batman",
+        "volume_year": 2016,
+        "volume_number": 3,
+        "special_version": null,
+        "issue_ids": [14],
+        "issue_numbers": ["12"],
+        "confidence": "high",
+        "reason": "title",
+        "destination": "/comics/Batman (2016)/Batman (2016) Volume 03 Issue 012.cbz",
+        "existing_files": []
+    }
+}
+```
+
+- `match` is `null` if nothing in the library resembles the file.
+- `confidence` is `high` when there is one clear match, `low` when it's a best guess and `manual` when the volume or issues were chosen with the match endpoint.
+- `reason` explains the confidence: `comicvine_id` (the metadata in the file has the ComicVine ID), `title` (matched on the title and issue), `similar_title`, `year`, `volume_number`, `special_version`, `annual` (these don't fit the volume), `issue_not_found`, `ambiguous` (multiple volumes fit equally well) and `manual`.
+- `issue_ids` is empty when the issue couldn't be found in the volume.
+- `warnings` can contain `unreadable` (the file isn't a working archive) and `contains_issues` (the archive contains multiple comic files).
 
 ## Logs: `GET /api/system/logs/entries`
 

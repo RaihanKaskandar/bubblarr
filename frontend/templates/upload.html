@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% from "base.html" import window %}
+{% block title %}Upload{% endblock %}
+{% block css %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/window.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
+{% endblock %}
+{% block js %}
+	<script src="{{ url_for('static', filename='js/window.js') }}" defer></script>
+	<script src="{{ url_for('static', filename='js/upload.js') }}" defer></script>
+{% endblock %}
+
+{% block pre_build_els %}
+<article class="upload-item">
+	<label class="item-select">
+		<input type="checkbox" aria-label="Import this file">
+	</label>
+	<div class="item-content">
+		<div class="item-header">
+			<h3 class="item-name"></h3>
+			<p class="item-size"></p>
+		</div>
+		<div class="item-progress hidden">
+			<progress max="100" value="0"></progress>
+		</div>
+		<p class="item-status hidden"></p>
+		<div class="item-match hidden">
+			<span class="item-badge"></span>
+			<a class="item-volume" target="_blank"></a>
+			<span class="item-issues"></span>
+			<button type="button" class="item-change">Change</button>
+		</div>
+		<p class="item-reason hidden"></p>
+		<p class="item-destination hidden"></p>
+		<ul class="item-warnings hidden"></ul>
+	</div>
+	<button type="button" class="item-remove icon-text-color" title="Remove this file">
+		<img src="{{ url_for('static', filename='img/delete.svg') }}" alt="">
+	</button>
+</article>
+{% endblock pre_build_els %}
+
+{% block windows %}
+	{% set match_content %}
+		<form id="match-search" class="search-bar icon-text-color">
+			<input type="text" id="match-search-input" aria-label="Search your volumes" placeholder="Search your volumes" autocomplete="off">
+			<button type="submit" aria-label="Search">
+				<img src="{{url_base}}/static/img/search.svg" alt="">
+			</button>
+		</form>
+		<p id="match-empty" class="hidden">No volumes found in your library.</p>
+		<ul id="match-results"></ul>
+		<div id="match-issues" class="hidden">
+			<p id="match-volume"></p>
+			<p id="match-issue-error" class="error hidden">This volume has no issues to link the file to.</p>
+			<div class="match-issue-selects">
+				<label>
+					Issue
+					<select id="match-issue-from"></select>
+				</label>
+				<label>
+					up to and including
+					<select id="match-issue-to"></select>
+				</label>
+			</div>
+			<label id="match-apply-all" class="hidden">
+				<input type="checkbox">
+				<span></span>
+			</label>
+		</div>
+	{% endset %}
+	{% set match_save %}
+		<button id="match-save" type="button" disabled>Use This Match</button>
+	{% endset %}
+
+	{{ window(False, "match-window", "Change Match", match_content, match_save) }}
+{% endblock windows %}
+
+{% block main %}
+<main>
+	<div id="upload-page">
+		<label id="drop-zone" class="icon-text-color" for="file-input">
+			<img src="{{ url_for('static', filename='img/upload.svg') }}" alt="">
+			<strong>Drop comic files here, or click to choose</strong>
+			<span>CBZ, CBR, CB7, CBT, ZIP, RAR, 7Z, PDF, EPUB and MOBI. Bubblarr recognises the series and issue from the metadata in the file or its filename, and moves it to the right folder under the right name.</span>
+			<input
+				type="file"
+				id="file-input"
+				multiple
+				accept=".cbz,.cbr,.cb7,.cbt,.cba,.zip,.rar,.7z,.7zip,.pdf,.epub,.mobi"
+			>
+		</label>
+
+		<div id="upload-toolbar" class="hidden">
+			<label>
+				<input type="checkbox" id="select-all" aria-label="Select all files for importing">
+				<span id="selection-count"></span>
+			</label>
+			<button type="button" id="clear-finished" class="hidden">Clear Imported</button>
+			<button type="button" id="import-selected" disabled>Import</button>
+		</div>
+
+		<div id="upload-list"></div>
+	</div>
+</main>
+{% endblock %}

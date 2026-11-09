@@ -33,6 +33,7 @@ torrent indexers) here, not to the Kapowarr project.
 - Run a "Search Monitored" to download whole volumes with one click, or use "Manual Search" to decide yourself
 - RSS sync picks up new releases on all indexers
 - Import your existing library
+- Upload comics from your device: Bubblarr recognises the series and issue from the metadata in the file or its filename, and puts it in the right folder under the right name
 - Downloaded files are moved and renamed in the format you want, and archives can be extracted and converted
 - A release calendar with upcoming issues, plus your pull list from League of Comic Geeks
 - League of Comic Geeks sync: downloaded issues are marked as collected in your account

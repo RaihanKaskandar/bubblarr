@@ -6,7 +6,8 @@ so that external apps (e.g. a request app) don't have to poll.
 
 Events:
     `volume.added`: A volume was added to the library.
-    `download.imported`: Downloaded issues were imported into the library.
+    `download.imported`: Downloaded or uploaded issues were imported into the
+        library. For uploads, the source of the download is `Upload`.
     `download.failed`: A download failed.
     `test`: Sent from the settings to test the webhooks.
 
@@ -175,6 +176,39 @@ def download_imported(download: Download) -> None:
         })
     except Exception:
         LOGGER.exception('Failed to send webhook for imported download')
+    return
+
+
+def upload_imported(
+    volume_id: int,
+    issue_ids: List[int],
+    title: str,
+    size: int
+) -> None:
+    from backend.implementations.volumes import Volume
+
+    try:
+        send_event('download.imported', {
+            'volume': _volume_data(volume_id),
+            'issues': [
+                {
+                    'id': issue.id,
+                    'comicvine_id': issue.comicvine_id,
+                    'issue_number': issue.issue_number,
+                    'title': issue.title,
+                    'downloaded': bool(issue.files)
+                }
+                for issue in Volume(volume_id).get_issues()
+                if issue.id in issue_ids
+            ],
+            'download': {
+                'title': title,
+                'source': 'Upload',
+                'size': size
+            }
+        })
+    except Exception:
+        LOGGER.exception('Failed to send webhook for imported upload')
     return
 
 

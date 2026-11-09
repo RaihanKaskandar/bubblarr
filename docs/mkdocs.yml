@@ -94,6 +94,7 @@ nav:
     - How To Use: general_info/how_to_use.md
     - Matching: general_info/matching.md
     - Library Import: general_info/library_import.md
+    - Upload: general_info/upload.md
     - Implementation Details: general_info/implementation_details.md
   - Settings:
     - Introduction: settings/settings.md

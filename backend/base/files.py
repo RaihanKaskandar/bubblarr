@@ -229,6 +229,7 @@ def archive_contains_issues(archive_file: str) -> bool:
     elif ext == '.rar':
         namelist = run_rar([
             "lb", # List archive contents bare
+            "-p-", # Don't ask for a password
             archive_file # Archive to list contents of
         ]).stdout.split("\n")[:-1]
 

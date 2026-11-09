@@ -82,6 +82,15 @@ class Constants:
     MAX_FILENAME_LENGTH = 255
     "The maximum amount of characters that a filename is allowed to be"
 
+    UPLOAD_FOLDER = ".bubblarr_uploads"
+    "Folder inside the download folder for files uploaded via the web-UI"
+
+    UPLOAD_INCOMPLETE_LIFETIME = 86_400 # seconds
+    "Seconds after the last chunk until an unfinished upload is deleted"
+
+    UPLOAD_READY_LIFETIME = 604_800 # seconds
+    "Seconds until a finished upload that wasn't imported is deleted"
+
     ARCHIVE_EXTRACT_FOLDER = ".archive_extract"
     "The subfolder to extract archives into temporarily"
 
@@ -195,6 +204,12 @@ class FileConstants:
     Maps lowercase cb* extensions to their lowercase archive extension,
     both without dot-prefix
     """
+
+    UPLOAD_EXTENSIONS = (
+        ".cbz", ".zip", ".cbr", ".rar", ".cb7", ".7zip", ".7z",
+        ".cbt", ".epub", ".pdf", ".cba", ".mobi"
+    )
+    "Lowercase extensions of comic files that can be uploaded, with dot-prefix"
 
     CONTENT_EXTENSIONS = (
         *IMAGE_EXTENSIONS,
@@ -827,6 +842,16 @@ class FileMatch(TypedDict):
     issue_ids: List[int]
     general_file: bool
     forced_match: bool
+
+
+class ComicInfoData(TypedDict):
+    series: Union[str, None]
+    number: Union[str, None]
+    volume: Union[int, None]
+    year: Union[int, None]
+    format: Union[str, None]
+    comicvine_issue_id: Union[int, None]
+    comicvine_volume_id: Union[int, None]
 
 
 class QueuedTaskData(TypedDict):

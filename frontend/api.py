@@ -33,6 +33,10 @@ from backend.features import comic_requests, comicgeeks_sync, webhooks
 from backend.features.download_queue import (DownloadHandler,
                                              delete_download_history,
                                              get_download_history)
+from backend.features.file_upload import (complete_upload, create_upload,
+                                          delete_upload, get_uploads,
+                                          import_upload, preview_match,
+                                          write_chunk)
 from backend.features.library_import import (import_library,
                                              propose_library_import)
 from backend.features.mass_edit import MassEditorActionManager
@@ -1014,6 +1018,100 @@ def api_library_import():
 
         import_library(data, rename_files)
         return return_api({}, code=201)
+
+
+# region Uploads
+def _parse_issue_ids(value: Any) -> List[int]:
+    if (
+        not isinstance(value, list)
+        or not value
+        or not all(type(i) is int for i in value)
+    ):
+        raise InvalidKeyValue('issue_ids', value)
+    return value
+
+
+@api.route('/uploads', methods=['GET', 'POST'])
+@error_handler
+@auth
+def api_uploads():
+    if request.method == 'GET':
+        return return_api(get_uploads())
+
+    elif request.method == 'POST':
+        data = request.get_json()
+        if not isinstance(data, dict):
+            raise InvalidKeyValue(value=data)
+
+        for key in ('filename', 'size'):
+            if key not in data:
+                raise KeyNotFound(key)
+
+        return return_api(
+            create_upload(data['filename'], data['size']),
+            code=201
+        )
+
+
+@api.route('/uploads/<upload_id>', methods=['PUT', 'DELETE'])
+@error_handler
+@auth
+def api_upload(upload_id: str):
+    if request.method == 'PUT':
+        offset: int = extract_key(request, 'offset')
+        return return_api({
+            'received': write_chunk(upload_id, offset, request.stream)
+        })
+
+    elif request.method == 'DELETE':
+        delete_upload(upload_id)
+        return return_api({})
+
+
+@api.route('/uploads/<upload_id>/complete', methods=['POST'])
+@error_handler
+@auth
+def api_upload_complete(upload_id: str):
+    return return_api(complete_upload(upload_id))
+
+
+@api.route('/uploads/<upload_id>/match', methods=['POST'])
+@error_handler
+@auth
+def api_upload_match(upload_id: str):
+    data = request.get_json()
+    if not isinstance(data, dict):
+        raise InvalidKeyValue(value=data)
+
+    if type(data.get('volume_id')) is not int:
+        raise InvalidKeyValue('volume_id', data.get('volume_id'))
+
+    issue_ids = data.get('issue_ids')
+    if issue_ids is not None:
+        issue_ids = _parse_issue_ids(issue_ids)
+
+    return return_api(preview_match(upload_id, data['volume_id'], issue_ids))
+
+
+@api.route('/uploads/<upload_id>/import', methods=['POST'])
+@error_handler
+@auth
+def api_upload_import(upload_id: str):
+    data = request.get_json()
+    if not isinstance(data, dict):
+        raise InvalidKeyValue(value=data)
+
+    if type(data.get('volume_id')) is not int:
+        raise InvalidKeyValue('volume_id', data.get('volume_id'))
+
+    return return_api(
+        import_upload(
+            upload_id,
+            data['volume_id'],
+            _parse_issue_ids(data.get('issue_ids'))
+        ),
+        code=201
+    )
 
 
 # region Library + Volumes

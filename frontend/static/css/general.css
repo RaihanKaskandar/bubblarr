@@ -79,6 +79,8 @@ noscript {
 	--nav-accent-color: #b4a3ee;
 	--success-color: #27c24c;
 	--error-color: #f05050;
+	--attention-color: #e6a23c;
+	--attention-text-color: #a86f12;
 
 	--header-background-color: #5d4a94;
 	--header-color: #ffffff;
@@ -107,6 +109,7 @@ noscript {
 	--accent-color: #a28fe6;
 	--on-accent-color: #202020;
 	--nav-accent-color: #b4a3ee;
+	--attention-text-color: #e6a23c;
 
 	--header-background-color: #2a2a2a;
 	--header-color: #e1e2e3;

@@ -4,7 +4,7 @@ This is a guide to using Bubblarr, after installation and setup.
 
 ## Adding Volumes To Your Library
 
-There are two ways you can add volumes: manually or by importing existing media files for the volume. To add a volume by importing existing media files for it, see the [Library Import documentation](./library_import.md). To manually add a volume:
+There are two ways you can add volumes: manually or by importing existing media files for the volume. To add a volume by importing existing media files for it, see the [Library Import documentation](./library_import.md). Files that are on your own device can be added to a volume with [Upload](./upload.md). To manually add a volume:
 
 1. In the web-UI, go to Volumes -> Add Volume.
 2. Enter a search term (or the ComicVine ID of the volume).
